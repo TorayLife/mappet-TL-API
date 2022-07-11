@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+      "target": "es5",
+      "module": "commonjs",
+      "typeRoots": ["./@types.*"],
+      "baseUrl": ".",
+      "allowSyntheticDefaultImports": true,
+      "strictNullChecks": true,
+      "allowUnusedLabels": true,
+      "noUnusedParameters": false,
+      "noUnusedLocals": false,
+    }
+  }

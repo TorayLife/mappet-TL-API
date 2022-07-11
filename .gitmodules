@@ -1,0 +1,3 @@
+[submodule "modules/mappetScripting"]
+	path = modules/mappetScripting
+	url = https://github.com/TorayLife/mappetScripting
