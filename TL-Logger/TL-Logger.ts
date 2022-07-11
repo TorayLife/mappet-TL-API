@@ -140,6 +140,7 @@ class logEntry {
 
 let TL_LOGGER_CALLBACKS = {};
 
+// @ts-ignore
 function main(c: IScriptEvent) {
 	asyncCall(c, () => {
 		let thisStorage = new SettingStorage('TL-LOGGER');
@@ -176,9 +177,7 @@ function TL_LOGGER_HANDLER(c: IScriptEvent) {
 		}
 		if (context.hotkey == 'F5' || last == 'form') {
 			saveContext(c.player, context.data);
-			asyncCall(c, () => {
-				fillLogs(c);
-			});
+			updateUI(c);
 		}
 		if (context.isClosed() && last == '') {
 			saveContext(c.player, context.data);
@@ -263,9 +262,7 @@ function formAbove(root, c) {
 
 			c.player.UIContext.get('dateSort').label(!sortAtoZ ? 'Date: from A to Z' : 'Date: from Z to A');
 			c.player.UIContext.get('dateSort.icon').icon(sortAtoZ ? 'move_down' : 'move_up');
-			asyncCall(c, () => {
-				fillLogs(c);
-			});
+			updateUI(c);
 		});
 
 
@@ -275,9 +272,7 @@ function formAbove(root, c) {
 			' regex to search' : 'Normal search').color(searchRegex ? 0x99ff99 : 0xffffff);
 
 		addCallback('searchbar', (c, elementId) => {
-			asyncCall(c, () => {
-				fillLogs(c);
-			});
+			updateUI(c);
 		});
 
 		above.icon(searchRegex ? 'graph' : 'bubble').id('search.mode').wh(16, 16).rx(1).anchorX(1).tooltip(searchRegex ? 'Using regex to' +
@@ -291,9 +286,7 @@ function formAbove(root, c) {
 
 			c.player.UIContext.get(elementId).icon(searchRegex ? 'graph' : 'bubble').tooltip(searchRegex ? 'Using regex to search' : 'Normal search');
 			c.player.UIContext.get('searchbar').tooltip(searchRegex ? 'Using regex to search' : 'Normal search').color(searchRegex ? 0x99ff99 : 0xffffff);
-			asyncCall(c, () => {
-				fillLogs(c);
-			});
+			updateUI(c);
 		});
 	}
 	catch (e) {
@@ -312,9 +305,7 @@ function formUnder(root, c) {
 	under.trackpad().integer().id('logPage').rx(0.8, 4).ry(0).wh(60, 20).tooltip('Page of' +
 		' logger').min(1).updateDelay(1000);
 	addCallback(`logPage`, (c, elementId) => {
-		asyncCall(c, () => {
-			fillLogs(c);
-		});
+		updateUI(c);
 	});
 }
 
@@ -416,9 +407,7 @@ function formFileToggles(root, c) {
 		for (let toggle of togglesList) {
 			context.get(toggle).enabled(!context.data.getBoolean(elementId));
 		}
-		asyncCall(c, () => {
-			fillLogs(c);
-		});
+		updateUI(c);
 	});
 
 	for (let fileName of fileList) {
@@ -427,9 +416,7 @@ function formFileToggles(root, c) {
 		elem.state(data ? data.getBoolean(`toggleList.${file}`) : false).enabled(data ? !data.getBoolean('toggleList.All') : false);
 
 		addCallback(`toggleList.${file}`, (c, elementId) => {
-			asyncCall(c, () => {
-				fillLogs(c);
-			});
+			updateUI(c);
 		});
 	}
 }
@@ -464,19 +451,13 @@ function formTypeToggles(root, c) {
 	typeTogglesList.toggle('Remember period').id('period').state(data ? data.getBoolean('period') : false).h(20);
 
 	addCallback('typeList.info', (c, elementId) => {
-		asyncCall(c, () => {
-			fillLogs(c);
-		});
+		updateUI(c);
 	});
 	addCallback('typeList.debug', (c, elementId) => {
-		asyncCall(c, () => {
-			fillLogs(c);
-		});
+		updateUI(c);
 	});
 	addCallback('typeList.error', (c, elementId) => {
-		asyncCall(c, () => {
-			fillLogs(c);
-		});
+		updateUI(c);
 	});
 	let status = typeTogglesList.label('\u00A7cWait...').id('status').labelAnchor(0.5).h(20).background(0xcc000000);
 }
@@ -626,6 +607,12 @@ function addCallback(id: string, callbackFunction: (c: IScriptEvent, elementId: 
 	TL_LOGGER_CALLBACKS[id] = callbackFunction;
 }
 
+function updateUI(c){
+	//asyncCall(c, () => {
+	//	fillLogs(c);
+	//});
+}
+
 function dateElement(root: IMappetUIBuilder, label: string, dateId: string, defaultDate: Date) {
 	let column = root.column(2);
 	column.current.context('file', `${dateId}.now`, 'Now', 0x474389);
@@ -655,9 +642,7 @@ function dateElement(root: IMappetUIBuilder, label: string, dateId: string, defa
 		context.data.setInt(`${dateId}.hour`, hour);
 		context.data.setInt(`${dateId}.minutes`, minutes);
 		context.data.setInt(`${dateId}.seconds`, seconds);
-		asyncCall(c, () => {
-			fillLogs(c);
-		});
+		updateUI(c);
 	});
 	addCallback(`${dateId}.dayStart`, (c, elementId) => {
 		let context = c.player.UIContext;
@@ -667,9 +652,7 @@ function dateElement(root: IMappetUIBuilder, label: string, dateId: string, defa
 		context.data.setInt(`${dateId}.hour`, 0);
 		context.data.setInt(`${dateId}.minutes`, 0);
 		context.data.setInt(`${dateId}.seconds`, 0);
-		asyncCall(c, () => {
-			fillLogs(c);
-		});
+		updateUI(c);
 	});
 	addCallback(`${dateId}.dayEnd`, (c, elementId) => {
 		let context = c.player.UIContext;
@@ -679,9 +662,7 @@ function dateElement(root: IMappetUIBuilder, label: string, dateId: string, defa
 		context.data.setInt(`${dateId}.hour`, 23);
 		context.data.setInt(`${dateId}.minutes`, 59);
 		context.data.setInt(`${dateId}.seconds`, 59);
-		asyncCall(c, () => {
-			fillLogs(c);
-		});
+		updateUI(c);
 	});
 
 	column.label(label).h(10).marginTop(4);
@@ -690,46 +671,34 @@ function dateElement(root: IMappetUIBuilder, label: string, dateId: string, defa
 
 	row.trackpad().limit(1, 31).integer().h(15).value(defaultDate.getUTCDate()).id(`${dateId}.day`).updateDelay(800);
 	addCallback(`${dateId}.day`, (c, elementId) => {
-		asyncCall(c, () => {
-			fillLogs(c);
-		});
+		updateUI(c);
 	});
 
 	row.trackpad().limit(1, 12).integer().h(15).value(defaultDate.getUTCMonth() + 1).id(`${dateId}.month`).updateDelay(800);
 	addCallback(`${dateId}.month`, (c, elementId) => {
-		asyncCall(c, () => {
-			fillLogs(c);
-		});
+		updateUI(c);
 	});
 
 	row.trackpad().limit(1970, 4200).integer().h(15).value(defaultDate.getUTCFullYear()).id(`${dateId}.year`).updateDelay(800);
 	addCallback(`${dateId}.year`, (c, elementId) => {
-		asyncCall(c, () => {
-			fillLogs(c);
-		});
+		updateUI(c);
 	});
 
 	let row2 = column.row(2);
 
 	row2.trackpad().limit(0, 23).integer().h(15).value(defaultDate.getUTCHours()).id(`${dateId}.hour`).updateDelay(800);
 	addCallback(`${dateId}.hour`, (c, elementId) => {
-		asyncCall(c, () => {
-			fillLogs(c);
-		});
+		updateUI(c);
 	});
 
 	row2.trackpad().limit(0, 59).integer().h(15).value(defaultDate.getUTCMinutes()).id(`${dateId}.minutes`).updateDelay(800);
 	addCallback(`${dateId}.minutes`, (c, elementId) => {
-		asyncCall(c, () => {
-			fillLogs(c);
-		});
+		updateUI(c);
 	});
 
 	row2.trackpad().limit(0, 59).integer().h(15).value(defaultDate.getUTCSeconds()).id(`${dateId}.seconds`).updateDelay(800);
 	addCallback(`${dateId}.seconds`, (c, elementId) => {
-		asyncCall(c, () => {
-			fillLogs(c);
-		});
+		updateUI(c);
 	});
 }
 

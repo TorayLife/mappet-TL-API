@@ -2,7 +2,7 @@
     "compilerOptions": {
       "target": "es5",
       "module": "commonjs",
-      "typeRoots": ["./@types.*"],
+      "typeRoots": [".modules/@types.*"],
       "baseUrl": ".",
       "allowSyntheticDefaultImports": true,
       "strictNullChecks": true,
