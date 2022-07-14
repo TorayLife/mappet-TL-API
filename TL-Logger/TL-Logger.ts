@@ -142,7 +142,7 @@ let TL_LOGGER_CALLBACKS = {};
 
 // @ts-ignore
 function main(c: IScriptEvent) {
-	asyncCall(c, () => {
+	Async.setTask('fill', () => {
 		let thisStorage = new SettingStorage('TL-LOGGER');
 		let debug = thisStorage.get('debug', 'Debug', 'Print debug logs when open UI.', SettingType.BOOLEAN, false);
 
@@ -160,7 +160,7 @@ function main(c: IScriptEvent) {
 
 		c.player.openUI(root, true);
 	});
-	asyncCall(c, () => {
+	Async.setTask('fill', () => {
 		fillLogs(c);
 	});
 }
@@ -183,8 +183,8 @@ function TL_LOGGER_HANDLER(c: IScriptEvent) {
 			saveContext(c.player, context.data);
 		}
 	}
-	catch (err) {
-		c.send(err);
+	catch (e) {
+		Logger.error(c, e);
 	}
 }
 
@@ -218,7 +218,7 @@ function formBaseUI(c) {
 	layout.current.rx(0.2, 20).rwh(0.75, 1);
 	formEmptyLogs(layout, c);
 	formAbove(layout, c);
-	formUnder(layout, c);
+	formUnder(layout);
 	return root;
 }
 
@@ -241,7 +241,7 @@ function formEmptyLogs(root, c) {
 		}
 	}
 	catch (e) {
-		c.send(e.stack);
+		Logger.error(c, e);
 	}
 }
 
@@ -290,13 +290,13 @@ function formAbove(root, c) {
 		});
 	}
 	catch (e) {
-		c.send(e.stack);
+		Logger.error(c, e);
 	}
 
 
 }
 
-function formUnder(root, c) {
+function formUnder(root) {
 	let under = root.layout();
 	under.current.rwh(1, 0.06).rxy(0, 1).anchor(0, 1);
 
@@ -318,8 +318,8 @@ function emptyLogs(c: IScriptEvent, limit) {
 			context.get(`log.label.${i}`).h(0).visible(false).margin(0);
 		}
 	}
-	catch (err) {
-		c.send(err.stack);
+	catch (e) {
+		Logger.error(c, e);
 	}
 }
 
@@ -459,7 +459,7 @@ function formTypeToggles(root, c) {
 	addCallback('typeList.error', (c, elementId) => {
 		updateUI(c);
 	});
-	let status = typeTogglesList.label('\u00A7cWait...').id('status').labelAnchor(0.5).h(20).background(0xcc000000);
+	typeTogglesList.label('\u00A7cWait...').id('status').labelAnchor(0.5).h(20).background(0xcc000000);
 }
 
 function getLogsWithSelections(c: IScriptEvent) {
@@ -484,7 +484,7 @@ function getLogsWithSelections(c: IScriptEvent) {
 
 	let sortFromAtoZ = data.getBoolean('dateSortAtoZ');
 
-	let filtered = filteredByFiles.filter((entry, i) => {
+	let filtered = filteredByFiles.filter((entry) => {
 		let info = entry.type == 'INFO' && dataInfo;
 		let debug = entry.type == 'DEBUG' && dataDebug;
 		let error = entry.type == 'ERROR' && dataError;
@@ -541,6 +541,7 @@ function getLogsWithSelections(c: IScriptEvent) {
 	let dataPage = Math.max(data.getInt('logPage'), 1);
 	let currentPage = Math.min(maxPages, dataPage);
 	data.setInt('logPage', currentPage);
+	c.player.UIContext.data.setInt('logPage', currentPage);
 
 	context.get('counter').label(`${currentPage}/${maxPages}`).tooltip(`Sorted: ${sorted.length}`);
 	context.get('logPage').max(Math.ceil(sorted.length / logLimit)).min(1).value(currentPage);
@@ -607,10 +608,10 @@ function addCallback(id: string, callbackFunction: (c: IScriptEvent, elementId: 
 	TL_LOGGER_CALLBACKS[id] = callbackFunction;
 }
 
-function updateUI(c){
-	//asyncCall(c, () => {
-	//	fillLogs(c);
-	//});
+function updateUI(c) {
+	Async.setTask('fill', () => {
+		fillLogs(c);
+	});
 }
 
 function dateElement(root: IMappetUIBuilder, label: string, dateId: string, defaultDate: Date) {

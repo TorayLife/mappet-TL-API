@@ -117,8 +117,9 @@ var logEntry = /** @class */ (function () {
     return logEntry;
 }());
 var TL_LOGGER_CALLBACKS = {};
+// @ts-ignore
 function main(c) {
-    asyncCall(c, function () {
+    Async.setTask('fill', function () {
         var thisStorage = new SettingStorage('TL-LOGGER');
         var debug = thisStorage.get('debug', 'Debug', 'Print debug logs when open UI.', SettingType.BOOLEAN, false);
         if (debug) {
@@ -132,7 +133,7 @@ function main(c) {
         var root = formBaseUI(c);
         c.player.openUI(root, true);
     });
-    asyncCall(c, function () {
+    Async.setTask('fill', function () {
         fillLogs(c);
     });
 }
@@ -148,16 +149,14 @@ function TL_LOGGER_HANDLER(c) {
         }
         if (context.hotkey == 'F5' || last == 'form') {
             saveContext(c.player, context.data);
-            asyncCall(c, function () {
-                fillLogs(c);
-            });
+            updateUI(c);
         }
         if (context.isClosed() && last == '') {
             saveContext(c.player, context.data);
         }
     }
-    catch (err) {
-        c.send(err);
+    catch (e) {
+        Logger.error(c, e);
     }
 }
 function saveContext(player, data) {
@@ -188,7 +187,7 @@ function formBaseUI(c) {
     layout.current.rx(0.2, 20).rwh(0.75, 1);
     formEmptyLogs(layout, c);
     formAbove(layout, c);
-    formUnder(layout, c);
+    formUnder(layout);
     return root;
 }
 function formEmptyLogs(root, c) {
@@ -210,7 +209,7 @@ function formEmptyLogs(root, c) {
         }
     }
     catch (e) {
-        c.send(e.stack);
+        Logger.error(c, e);
     }
 }
 function formAbove(root, c) {
@@ -228,18 +227,14 @@ function formAbove(root, c) {
             saveContext(c.player, data);
             c.player.UIContext.get('dateSort').label(!sortAtoZ ? 'Date: from A to Z' : 'Date: from Z to A');
             c.player.UIContext.get('dateSort.icon').icon(sortAtoZ ? 'move_down' : 'move_up');
-            asyncCall(c, function () {
-                fillLogs(c);
-            });
+            updateUI(c);
         });
         var searchRegex = data.getBoolean('search.modeRegex');
         above.label('Search:').labelAnchor(0, 0.5).wh(65, 16).anchorX(1).rx(1, -300);
         above.textbox(data.getString('searchbar')).wh(300, 16).id('searchbar').rx(1, -20).anchorX(1).updateDelay(500).tooltip(searchRegex ? 'Using' +
             ' regex to search' : 'Normal search').color(searchRegex ? 0x99ff99 : 0xffffff);
         addCallback('searchbar', function (c, elementId) {
-            asyncCall(c, function () {
-                fillLogs(c);
-            });
+            updateUI(c);
         });
         above.icon(searchRegex ? 'graph' : 'bubble').id('search.mode').wh(16, 16).rx(1).anchorX(1).tooltip(searchRegex ? 'Using regex to' +
             ' search' : 'Normal search');
@@ -250,16 +245,14 @@ function formAbove(root, c) {
             saveContext(c.player, data);
             c.player.UIContext.get(elementId).icon(searchRegex ? 'graph' : 'bubble').tooltip(searchRegex ? 'Using regex to search' : 'Normal search');
             c.player.UIContext.get('searchbar').tooltip(searchRegex ? 'Using regex to search' : 'Normal search').color(searchRegex ? 0x99ff99 : 0xffffff);
-            asyncCall(c, function () {
-                fillLogs(c);
-            });
+            updateUI(c);
         });
     }
     catch (e) {
-        c.send(e.stack);
+        Logger.error(c, e);
     }
 }
-function formUnder(root, c) {
+function formUnder(root) {
     var under = root.layout();
     under.current.rwh(1, 0.06).rxy(0, 1).anchor(0, 1);
     under.button('Form log list').h(20).rw(0.8).id('form').background(0x474389);
@@ -267,9 +260,7 @@ function formUnder(root, c) {
     under.trackpad().integer().id('logPage').rx(0.8, 4).ry(0).wh(60, 20).tooltip('Page of' +
         ' logger').min(1).updateDelay(1000);
     addCallback("logPage", function (c, elementId) {
-        asyncCall(c, function () {
-            fillLogs(c);
-        });
+        updateUI(c);
     });
 }
 function emptyLogs(c, limit) {
@@ -280,8 +271,8 @@ function emptyLogs(c, limit) {
             context.get("log.label." + i).h(0).visible(false).margin(0);
         }
     }
-    catch (err) {
-        c.send(err.stack);
+    catch (e) {
+        Logger.error(c, e);
     }
 }
 function fillLogs(c) {
@@ -356,9 +347,7 @@ function formFileToggles(root, c) {
             var toggle = togglesList_1[_i];
             context.get(toggle).enabled(!context.data.getBoolean(elementId));
         }
-        asyncCall(c, function () {
-            fillLogs(c);
-        });
+        updateUI(c);
     });
     for (var _i = 0, fileList_1 = fileList; _i < fileList_1.length; _i++) {
         var fileName = fileList_1[_i];
@@ -366,9 +355,7 @@ function formFileToggles(root, c) {
         var elem_1 = fileTogglesList.toggle(file).h(20).id("toggleList." + file);
         elem_1.state(data ? data.getBoolean("toggleList." + file) : false).enabled(data ? !data.getBoolean('toggleList.All') : false);
         addCallback("toggleList." + file, function (c, elementId) {
-            asyncCall(c, function () {
-                fillLogs(c);
-            });
+            updateUI(c);
         });
     }
 }
@@ -396,21 +383,15 @@ function formTypeToggles(root, c) {
     dateElement(typeTogglesList, 'Period end:', 'endDate', endDate);
     typeTogglesList.toggle('Remember period').id('period').state(data ? data.getBoolean('period') : false).h(20);
     addCallback('typeList.info', function (c, elementId) {
-        asyncCall(c, function () {
-            fillLogs(c);
-        });
+        updateUI(c);
     });
     addCallback('typeList.debug', function (c, elementId) {
-        asyncCall(c, function () {
-            fillLogs(c);
-        });
+        updateUI(c);
     });
     addCallback('typeList.error', function (c, elementId) {
-        asyncCall(c, function () {
-            fillLogs(c);
-        });
+        updateUI(c);
     });
-    var status = typeTogglesList.label('\u00A7cWait...').id('status').labelAnchor(0.5).h(20).background(0xcc000000);
+    typeTogglesList.label('\u00A7cWait...').id('status').labelAnchor(0.5).h(20).background(0xcc000000);
 }
 function getLogsWithSelections(c) {
     var data = c.getValue('data');
@@ -430,7 +411,7 @@ function getLogsWithSelections(c) {
     endDate.setTime(endDate.getTime() + data.getInt('endDate.seconds') * 1000);
     var endTime = endDate.getTime();
     var sortFromAtoZ = data.getBoolean('dateSortAtoZ');
-    var filtered = filteredByFiles.filter(function (entry, i) {
+    var filtered = filteredByFiles.filter(function (entry) {
         var info = entry.type == 'INFO' && dataInfo;
         var debug = entry.type == 'DEBUG' && dataDebug;
         var error = entry.type == 'ERROR' && dataError;
@@ -478,6 +459,7 @@ function getLogsWithSelections(c) {
     var dataPage = Math.max(data.getInt('logPage'), 1);
     var currentPage = Math.min(maxPages, dataPage);
     data.setInt('logPage', currentPage);
+    c.player.UIContext.data.setInt('logPage', currentPage);
     context.get('counter').label(currentPage + "/" + maxPages).tooltip("Sorted: " + sorted.length);
     context.get('logPage').max(Math.ceil(sorted.length / logLimit)).min(1).value(currentPage);
     var toSkip = (data.getInt('logPage') - 1) * logLimit;
@@ -537,6 +519,11 @@ function getFiles() {
 function addCallback(id, callbackFunction) {
     TL_LOGGER_CALLBACKS[id] = callbackFunction;
 }
+function updateUI(c) {
+    Async.setTask('fill', function () {
+        fillLogs(c);
+    });
+}
 function dateElement(root, label, dateId, defaultDate) {
     var column = root.column(2);
     column.current.context('file', dateId + ".now", 'Now', 0x474389);
@@ -564,9 +551,7 @@ function dateElement(root, label, dateId, defaultDate) {
         context.data.setInt(dateId + ".hour", hour);
         context.data.setInt(dateId + ".minutes", minutes);
         context.data.setInt(dateId + ".seconds", seconds);
-        asyncCall(c, function () {
-            fillLogs(c);
-        });
+        updateUI(c);
     });
     addCallback(dateId + ".dayStart", function (c, elementId) {
         var context = c.player.UIContext;
@@ -576,9 +561,7 @@ function dateElement(root, label, dateId, defaultDate) {
         context.data.setInt(dateId + ".hour", 0);
         context.data.setInt(dateId + ".minutes", 0);
         context.data.setInt(dateId + ".seconds", 0);
-        asyncCall(c, function () {
-            fillLogs(c);
-        });
+        updateUI(c);
     });
     addCallback(dateId + ".dayEnd", function (c, elementId) {
         var context = c.player.UIContext;
@@ -588,48 +571,34 @@ function dateElement(root, label, dateId, defaultDate) {
         context.data.setInt(dateId + ".hour", 23);
         context.data.setInt(dateId + ".minutes", 59);
         context.data.setInt(dateId + ".seconds", 59);
-        asyncCall(c, function () {
-            fillLogs(c);
-        });
+        updateUI(c);
     });
     column.label(label).h(10).marginTop(4);
     var row = column.row(2);
     row.trackpad().limit(1, 31).integer().h(15).value(defaultDate.getUTCDate()).id(dateId + ".day").updateDelay(800);
     addCallback(dateId + ".day", function (c, elementId) {
-        asyncCall(c, function () {
-            fillLogs(c);
-        });
+        updateUI(c);
     });
     row.trackpad().limit(1, 12).integer().h(15).value(defaultDate.getUTCMonth() + 1).id(dateId + ".month").updateDelay(800);
     addCallback(dateId + ".month", function (c, elementId) {
-        asyncCall(c, function () {
-            fillLogs(c);
-        });
+        updateUI(c);
     });
     row.trackpad().limit(1970, 4200).integer().h(15).value(defaultDate.getUTCFullYear()).id(dateId + ".year").updateDelay(800);
     addCallback(dateId + ".year", function (c, elementId) {
-        asyncCall(c, function () {
-            fillLogs(c);
-        });
+        updateUI(c);
     });
     var row2 = column.row(2);
     row2.trackpad().limit(0, 23).integer().h(15).value(defaultDate.getUTCHours()).id(dateId + ".hour").updateDelay(800);
     addCallback(dateId + ".hour", function (c, elementId) {
-        asyncCall(c, function () {
-            fillLogs(c);
-        });
+        updateUI(c);
     });
     row2.trackpad().limit(0, 59).integer().h(15).value(defaultDate.getUTCMinutes()).id(dateId + ".minutes").updateDelay(800);
     addCallback(dateId + ".minutes", function (c, elementId) {
-        asyncCall(c, function () {
-            fillLogs(c);
-        });
+        updateUI(c);
     });
     row2.trackpad().limit(0, 59).integer().h(15).value(defaultDate.getUTCSeconds()).id(dateId + ".seconds").updateDelay(800);
     addCallback(dateId + ".seconds", function (c, elementId) {
-        asyncCall(c, function () {
-            fillLogs(c);
-        });
+        updateUI(c);
     });
 }
 function getDate(c, dateId) {
