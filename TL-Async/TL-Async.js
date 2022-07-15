@@ -2,15 +2,15 @@ var Async = /** @class */ (function () {
     function Async() {
     }
     Async.async = function () {
-        this.phaser.register();
+        Async.phaser.register();
         return function (err, result) {
-            this.results = { err: err, result: result };
-            this.phaser.arriveAndDeregister();
+            Async.results = { err: err, result: result };
+            Async.phaser.arriveAndDeregister();
         };
     };
     ;
     Async.setTimeout = function (fn, millis) {
-        this.phaser.register();
+        Async.phaser.register();
         var task = new Async.JTimerTask({
             run: function () {
                 try {
@@ -21,17 +21,17 @@ var Async = /** @class */ (function () {
                 }
             },
         });
-        this.timer.schedule(task, millis || 0);
+        Async.timer.schedule(task, millis || 0);
         return task;
     };
     Async.setInterval = function (fn, millis) {
-        this.phaser.register();
-        var task = new this.JTimerTask({
+        Async.phaser.register();
+        var task = new Async.JTimerTask({
             run: function () {
                 fn();
             }
         });
-        this.timer.scheduleAtFixedRate(task, millis, millis);
+        Async.timer.scheduleAtFixedRate(task, millis, millis);
         return task;
     };
     Async.clearInterval = function (task) {
@@ -40,10 +40,9 @@ var Async = /** @class */ (function () {
         }
     };
     Async.setTask = function (taskName, fn, millis, repeat) {
-        var _this = this;
         if (millis === void 0) { millis = 0; }
         if (repeat === void 0) { repeat = false; }
-        var done = this.async();
+        var done = Async.async();
         var func = function () {
             try {
                 fn();
@@ -51,22 +50,22 @@ var Async = /** @class */ (function () {
             catch (err) {
             }
             done(null, 'WORK DONE!');
-            _this.tasks[taskName] = null;
+            Async.tasks[taskName] = null;
         };
-        var task = repeat ? this.setInterval(func, millis) : this.setTimeout(func, millis);
+        var task = repeat ? Async.setInterval(func, millis) : Async.setTimeout(func, millis);
         if (millis > 0) {
-            this.phaser.awaitAdvanceInterruptibly(this.phaser.arrive(), millis, this.JTimeUnit.MILLISECONDS);
+            Async.phaser.awaitAdvanceInterruptibly(Async.phaser.arrive(), millis, Async.JTimeUnit.MILLISECONDS);
         }
         else {
-            this.phaser.awaitAdvanceInterruptibly(this.phaser.arrive());
+            Async.phaser.awaitAdvanceInterruptibly(Async.phaser.arrive());
         }
-        this.tasks[taskName] = task;
+        Async.tasks[taskName] = task;
         return task;
     };
     Async.cancelTask = function (taskName) {
-        if (this.tasks[taskName]) {
-            this.clearInterval(this.tasks[taskName]);
-            this.tasks[taskName] = null;
+        if (Async.tasks[taskName]) {
+            Async.clearInterval(Async.tasks[taskName]);
+            Async.tasks[taskName] = null;
         }
     };
     Async.JTimer = Java.type('java.util.Timer');

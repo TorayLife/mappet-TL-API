@@ -10,16 +10,16 @@ abstract class Async {
 	static tasks = {};
 
 	private static async() {
-		this.phaser.register();
+		Async.phaser.register();
 
 		return function (err, result) {
-			this.results = {err: err, result: result};
-			this.phaser.arriveAndDeregister();
+			Async.results = {err: err, result: result};
+			Async.phaser.arriveAndDeregister();
 		};
 	};
 
 	private static setTimeout(fn, millis) {
-		this.phaser.register();
+		Async.phaser.register();
 
 		let task = new Async.JTimerTask({
 			run: function () {
@@ -31,21 +31,21 @@ abstract class Async {
 			},
 		});
 
-		this.timer.schedule(task, millis || 0);
+		Async.timer.schedule(task, millis || 0);
 
 		return task;
 	}
 
 	private static setInterval(fn, millis) {
-		this.phaser.register();
+		Async.phaser.register();
 
-		var task = new this.JTimerTask({
+		var task = new Async.JTimerTask({
 			run: function (){
 				fn();
 			}
 		});
 
-		this.timer.scheduleAtFixedRate(task, millis, millis);
+		Async.timer.scheduleAtFixedRate(task, millis, millis);
 
 		return task;
 	}
@@ -58,7 +58,7 @@ abstract class Async {
 
 	public static setTask(taskName:string, fn:()=>any, millis:number = 0, repeat:boolean = false){
 
-		let done = this.async();
+		let done = Async.async();
 
 		let func = () => {
 			try{
@@ -68,28 +68,28 @@ abstract class Async {
 
 			}
 			done(null, 'WORK DONE!');
-			this.tasks[taskName] = null;
+			Async.tasks[taskName] = null;
 		}
 
-		let task = repeat ? this.setInterval(func, millis) : this.setTimeout(func, millis);
+		let task = repeat ? Async.setInterval(func, millis) : Async.setTimeout(func, millis);
 
 		if(millis > 0){
-			this.phaser.awaitAdvanceInterruptibly(this.phaser.arrive(), millis, this.JTimeUnit.MILLISECONDS);
+			Async.phaser.awaitAdvanceInterruptibly(Async.phaser.arrive(), millis, Async.JTimeUnit.MILLISECONDS);
 		}
 		else{
-			this.phaser.awaitAdvanceInterruptibly(this.phaser.arrive());
+			Async.phaser.awaitAdvanceInterruptibly(Async.phaser.arrive());
 		}
 
 
-		this.tasks[taskName] = task;
+		Async.tasks[taskName] = task;
 
 		return task;
 	}
 
 	public static cancelTask(taskName:string){
-		if(this.tasks[taskName]){
-			this.clearInterval(this.tasks[taskName]);
-			this.tasks[taskName] = null;
+		if(Async.tasks[taskName]){
+			Async.clearInterval(Async.tasks[taskName]);
+			Async.tasks[taskName] = null;
 		}
 	}
 }
