@@ -30,6 +30,7 @@ enum SettingType {
 	ENUM,
 	POS,
 	ARRAY,
+	PARAGRAPH,
 }
 
 class SettingStorage {
@@ -334,7 +335,7 @@ class SettingString extends Setting<string> {
 		let column = root.column(4);
 		column.label(this.label).h(20).labelAnchor(0, 0.5);
 		let row = column.row(4);
-		row.textarea().id(this.id).h(this.value.length > 42 ? 60 : 30).label(this.value);
+		row.textbox().id(this.id).h(20).label(this.value).maxLength(99999);
 		row.current.tooltip(this.description).context('refresh', `${this.id}.reset`, 'Reset value to default', 0x9966cc);
 		return row;
 	}
@@ -350,6 +351,21 @@ class SettingString extends Setting<string> {
 	updateRender(c: IScriptEvent) {
 		let component = <UITextareaComponent>c.player.UIContext.get(this.id);
 		component.label(this.value);
+	}
+}
+
+class SettingParagraph extends SettingString{
+	constructor(data) {
+		super(data);
+	}
+
+	render(root: IMappetUIBuilder): any {
+		let column = root.column(4);
+		column.label(this.label).h(20).labelAnchor(0, 0.5);
+		let row = column.row(4);
+		row.textarea().id(this.id).h(this.value.length > 42 ? 60 : 30).label(this.value);
+		row.current.tooltip(this.description).context('refresh', `${this.id}.reset`, 'Reset value to default', 0x9966cc);
+		return row;
 	}
 }
 

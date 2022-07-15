@@ -44,6 +44,7 @@ var SettingType;
     SettingType[SettingType["ENUM"] = 7] = "ENUM";
     SettingType[SettingType["POS"] = 8] = "POS";
     SettingType[SettingType["ARRAY"] = 9] = "ARRAY";
+    SettingType[SettingType["PARAGRAPH"] = 10] = "PARAGRAPH";
 })(SettingType || (SettingType = {}));
 var SettingStorage = /** @class */ (function () {
     function SettingStorage(fileName, init) {
@@ -313,7 +314,7 @@ var SettingString = /** @class */ (function (_super) {
         var column = root.column(4);
         column.label(this.label).h(20).labelAnchor(0, 0.5);
         var row = column.row(4);
-        row.textarea().id(this.id).h(this.value.length > 42 ? 60 : 30).label(this.value);
+        row.textbox().id(this.id).h(20).label(this.value).maxLength(99999);
         row.current.tooltip(this.description).context('refresh', this.id + ".reset", 'Reset value to default', 0x9966cc);
         return row;
     };
@@ -330,6 +331,21 @@ var SettingString = /** @class */ (function (_super) {
     };
     return SettingString;
 }(Setting));
+var SettingParagraph = /** @class */ (function (_super) {
+    __extends(SettingParagraph, _super);
+    function SettingParagraph(data) {
+        return _super.call(this, data) || this;
+    }
+    SettingParagraph.prototype.render = function (root) {
+        var column = root.column(4);
+        column.label(this.label).h(20).labelAnchor(0, 0.5);
+        var row = column.row(4);
+        row.textarea().id(this.id).h(this.value.length > 42 ? 60 : 30).label(this.value);
+        row.current.tooltip(this.description).context('refresh', this.id + ".reset", 'Reset value to default', 0x9966cc);
+        return row;
+    };
+    return SettingParagraph;
+}(SettingString));
 var SettingColorRGB = /** @class */ (function (_super) {
     __extends(SettingColorRGB, _super);
     function SettingColorRGB(data) {
