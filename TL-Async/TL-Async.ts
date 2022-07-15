@@ -68,6 +68,7 @@ abstract class Async {
 
 			}
 			done(null, 'WORK DONE!');
+			this.tasks[taskName] = null;
 		}
 
 		let task = repeat ? this.setInterval(func, millis) : this.setTimeout(func, millis);

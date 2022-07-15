@@ -40,6 +40,7 @@ var Async = /** @class */ (function () {
         }
     };
     Async.setTask = function (taskName, fn, millis, repeat) {
+        var _this = this;
         if (millis === void 0) { millis = 0; }
         if (repeat === void 0) { repeat = false; }
         var done = this.async();
@@ -50,6 +51,7 @@ var Async = /** @class */ (function () {
             catch (err) {
             }
             done(null, 'WORK DONE!');
+            _this.tasks[taskName] = null;
         };
         var task = repeat ? this.setInterval(func, millis) : this.setTimeout(func, millis);
         if (millis > 0) {
