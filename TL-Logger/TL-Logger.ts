@@ -1,3 +1,5 @@
+//region Library code
+
 //TL-LOGGER
 abstract class Logger {
 	private static getLogsPath() {
@@ -138,7 +140,11 @@ class logEntry {
 }
 
 
-let TL_LOGGER_CALLBACKS = {};
+let TL_LoggerCallbacks = {};
+
+//endregion
+
+//region Mappet functions
 
 // @ts-ignore
 function main(c: IScriptEvent) {
@@ -165,22 +171,24 @@ function main(c: IScriptEvent) {
 	});
 }
 
-function TL_LOGGER_HANDLER(c: IScriptEvent) {
+function TL_LoggerHandler(c: IScriptEvent) {
 	try {
 		let context = c.player.UIContext;
 		let last = context.last;
-		if (last && TL_LOGGER_CALLBACKS[last]) {
-			TL_LOGGER_CALLBACKS[last](c, last);
+		if (last && TL_LoggerCallbacks[last]) {
+			TL_LoggerCallbacks[last](c, last);
 		}
-		if (last == '' && context.context && TL_LOGGER_CALLBACKS[context.context]) {
-			TL_LOGGER_CALLBACKS[context.context](c, context.context);
+		if (last == '' && context.context && TL_LoggerCallbacks[context.context]) {
+			TL_LoggerCallbacks[context.context](c, context.context);
 		}
 		if (context.hotkey == 'F5' || last == 'form') {
 			saveContext(c.player, context.data);
-			updateUI(c);
 		}
 		if (context.isClosed() && last == '') {
 			saveContext(c.player, context.data);
+		}
+		else{
+			updateUI(c);
 		}
 	}
 	catch (e) {
@@ -188,29 +196,12 @@ function TL_LOGGER_HANDLER(c: IScriptEvent) {
 	}
 }
 
-function saveContext(player: IScriptPlayer, data: INBTCompound) {
-	let nbt = <INBTCompound>data.copy();
-	if (!nbt.has('dateSortAtoZ')) {
-		nbt.setBoolean('dateSortAtoZ', getContext(player).getBoolean('dateSortAtoZ'));
-	}
-	if (!(<INBTCompound>nbt).has('search.modeRegex')) {
-		nbt.setBoolean('search.modeRegex', getContext(player).getBoolean('search.modeRegex'));
-	}
-	player.states.setString('loggerSettings', nbt.stringify());
-	return nbt;
-}
+//endregion
 
-function getContext(player: IScriptPlayer) {
-	let stateId = 'loggerSettings';
-	let state = player.states.getString(stateId);
-	if (state == '') {
-		return mappet.createCompound();
-	}
-	return mappet.createCompound(state);
-}
+//region Forming a UI modules
 
 function formBaseUI(c) {
-	let root = mappet.createUI(c, 'TL_LOGGER_HANDLER').background();
+	let root = mappet.createUI(c, 'TL_LoggerHandler').background();
 	root.current.keybind(63, 'F5', 'F5');
 	formFileToggles(root, c);
 	formTypeToggles(root, c);
@@ -262,7 +253,6 @@ function formAbove(root, c) {
 
 			c.player.UIContext.get('dateSort').label(!sortAtoZ ? 'Date: from A to Z' : 'Date: from Z to A');
 			c.player.UIContext.get('dateSort.icon').icon(sortAtoZ ? 'move_down' : 'move_up');
-			updateUI(c);
 		});
 
 
@@ -270,10 +260,6 @@ function formAbove(root, c) {
 		above.label('Search:').labelAnchor(0, 0.5).wh(65, 16).anchorX(1).rx(1, -300);
 		above.textbox(data.getString('searchbar')).wh(300, 16).id('searchbar').rx(1, -20).anchorX(1).updateDelay(500).tooltip(searchRegex ? 'Using' +
 			' regex to search' : 'Normal search').color(searchRegex ? 0x99ff99 : 0xffffff);
-
-		addCallback('searchbar', (c, elementId) => {
-			updateUI(c);
-		});
 
 		above.icon(searchRegex ? 'graph' : 'bubble').id('search.mode').wh(16, 16).rx(1).anchorX(1).tooltip(searchRegex ? 'Using regex to' +
 			' search' : 'Normal search');
@@ -286,7 +272,6 @@ function formAbove(root, c) {
 
 			c.player.UIContext.get(elementId).icon(searchRegex ? 'graph' : 'bubble').tooltip(searchRegex ? 'Using regex to search' : 'Normal search');
 			c.player.UIContext.get('searchbar').tooltip(searchRegex ? 'Using regex to search' : 'Normal search').color(searchRegex ? 0x99ff99 : 0xffffff);
-			updateUI(c);
 		});
 	}
 	catch (e) {
@@ -304,12 +289,138 @@ function formUnder(root) {
 	under.label('').rxy(1, 0).labelAnchor(1, 0.5).anchor(1, 0).rw(0.2).h(20).id('counter');
 	under.trackpad().integer().id('logPage').rx(0.8, 4).ry(0).wh(60, 20).tooltip('Page of' +
 		' logger').min(1).updateDelay(1000);
-	addCallback(`logPage`, (c, elementId) => {
-		updateUI(c);
-	});
 }
 
-function emptyLogs(c: IScriptEvent, limit) {
+function formFileToggles(root, c) {
+
+	let data = c.getValue('data');
+
+	let fileList = getFiles();
+	let fileTogglesLayout = root.layout();
+	fileTogglesLayout.current.rwh(0.2, 0.5).rx(0, 10).ry(0, 0);
+	let fileTogglesList = fileTogglesLayout.column(4);
+	fileTogglesList.current.rwh(1, 1).scroll().scrollSize(0.05);
+
+	let elem = fileTogglesList.toggle(`All`).h(20).id(`toggleList.All`);
+	elem.state(data ? data.getBoolean(`toggleList.All`) : true);
+
+	addCallback(`toggleList.All`, (c, elementId) => {
+		let togglesList = fileList.map((file) => {
+			return `toggleList.${file.replace('.json', '')}`;
+		});
+		let context = c.player.UIContext;
+		for (let toggle of togglesList) {
+			context.get(toggle).enabled(!context.data.getBoolean(elementId));
+		}
+	});
+
+	for (let fileName of fileList) {
+		let file = fileName.replace('.json', '');
+		let elem = fileTogglesList.toggle(file).h(20).id(`toggleList.${file}`);
+		elem.state(data ? data.getBoolean(`toggleList.${file}`) : false).enabled(data ? !data.getBoolean('toggleList.All') : false);
+	}
+}
+
+function formTypeToggles(root, c) {
+	let data = c.getValue('data');
+	let rememberPeriod = data ? data.getBoolean('period') : false;
+	let typeTogglesLayout = root.layout();
+	typeTogglesLayout.current.rwh(0.2, 0.5).rx(0, 10).ry(1, -10).anchor(0, 1);
+	let typeTogglesList = typeTogglesLayout.column(4);
+	typeTogglesList.current.rwh(1, 1).anchor(0, 1).rxy(0, 1);
+	typeTogglesList.label('Types:').h(10);
+	typeTogglesList.toggle('[2INFO').id('typeList.info').h(20).state(data ? data.getBoolean('typeList.info') : true);
+	typeTogglesList.toggle('[9DEBUG').id('typeList.debug').h(20).state(data ? data.getBoolean('typeList.debug') : true);
+	typeTogglesList.toggle('[4ERROR').id('typeList.error').h(20).state(data ? data.getBoolean('typeList.error') : true);
+
+	let startDate = new Date(0);
+	if (data && rememberPeriod) {
+		startDate = new Date(data.getInt('startDate.year'), data.getInt('startDate.month') - 1, data.getInt('startDate.day'),
+			data.getInt('startDate.hour') + Logger.getUTC(), data.getInt('startDate.minutes'), data.getInt('startDate.seconds'));
+	}
+	dateElement(typeTogglesList, 'Period start:', 'startDate', startDate);
+
+	let endDate = new Date();
+	endDate.setTime(endDate.getTime() + Logger.getUTC() * 60 * 60 * 1000);
+	if (data && rememberPeriod) {
+		endDate = new Date(data.getInt('endDate.year'), data.getInt('endDate.month') - 1, data.getInt('endDate.day'),
+			data.getInt('endDate.hour') + Logger.getUTC(), data.getInt('endDate.minutes'), data.getInt('endDate.seconds'));
+	}
+
+	dateElement(typeTogglesList, 'Period end:', 'endDate', endDate);
+	typeTogglesList.toggle('Remember period').id('period').state(data ? data.getBoolean('period') : false).h(20);
+	typeTogglesList.label('\u00A7cWait...').id('status').labelAnchor(0.5).h(20).background(0xcc000000);
+}
+
+function dateElement(root: IMappetUIBuilder, label: string, dateId: string, defaultDate: Date) {
+	let column = root.column(2);
+	column.current.context('file', `${dateId}.now`, 'Now', 0x474389);
+	column.current.context('leftload', `${dateId}.dayStart`, 'Day start', 0x474389);
+	column.current.context('rightload', `${dateId}.dayEnd`, 'Day end', 0x474389);
+	addCallback(`${dateId}.now`, (c, elementId) => {
+		let context = c.player.UIContext;
+		let date = new Date();
+		let day = date.getUTCDate();
+		let month = date.getUTCMonth() + 1;
+		let year = date.getUTCFullYear();
+		let hour = date.getUTCHours() + Logger.getUTC();
+		let minutes = date.getUTCMinutes();
+		let seconds = date.getUTCSeconds();
+
+
+		let dateId = elementId.split('.')[0];
+		context.get(`${dateId}.day`).value(day);
+		context.get(`${dateId}.month`).value(month);
+		context.get(`${dateId}.year`).value(year);
+		context.get(`${dateId}.hour`).value(hour);
+		context.get(`${dateId}.minutes`).value(minutes);
+		context.get(`${dateId}.seconds`).value(seconds);
+		context.data.setInt(`${dateId}.day`, day);
+		context.data.setInt(`${dateId}.month`, month);
+		context.data.setInt(`${dateId}.year`, year);
+		context.data.setInt(`${dateId}.hour`, hour);
+		context.data.setInt(`${dateId}.minutes`, minutes);
+		context.data.setInt(`${dateId}.seconds`, seconds);
+	});
+	addCallback(`${dateId}.dayStart`, (c, elementId) => {
+		let context = c.player.UIContext;
+		context.get(`${dateId}.hour`).value(0);
+		context.get(`${dateId}.minutes`).value(0);
+		context.get(`${dateId}.seconds`).value(0);
+		context.data.setInt(`${dateId}.hour`, 0);
+		context.data.setInt(`${dateId}.minutes`, 0);
+		context.data.setInt(`${dateId}.seconds`, 0);
+	});
+	addCallback(`${dateId}.dayEnd`, (c, elementId) => {
+		let context = c.player.UIContext;
+		context.get(`${dateId}.hour`).value(23);
+		context.get(`${dateId}.minutes`).value(59);
+		context.get(`${dateId}.seconds`).value(59);
+		context.data.setInt(`${dateId}.hour`, 23);
+		context.data.setInt(`${dateId}.minutes`, 59);
+		context.data.setInt(`${dateId}.seconds`, 59);
+	});
+
+	column.label(label).h(10).marginTop(4);
+
+	let row = column.row(2);
+
+	row.trackpad().limit(1, 31).integer().h(15).value(defaultDate.getUTCDate()).id(`${dateId}.day`).updateDelay(800);
+	row.trackpad().limit(1, 12).integer().h(15).value(defaultDate.getUTCMonth() + 1).id(`${dateId}.month`).updateDelay(800);
+	row.trackpad().limit(1970, 4200).integer().h(15).value(defaultDate.getUTCFullYear()).id(`${dateId}.year`).updateDelay(800);
+
+	let row2 = column.row(2);
+
+	row2.trackpad().limit(0, 23).integer().h(15).value(defaultDate.getUTCHours()).id(`${dateId}.hour`).updateDelay(800);
+	row2.trackpad().limit(0, 59).integer().h(15).value(defaultDate.getUTCMinutes()).id(`${dateId}.minutes`).updateDelay(800);
+	row2.trackpad().limit(0, 59).integer().h(15).value(defaultDate.getUTCSeconds()).id(`${dateId}.seconds`).updateDelay(800);
+}
+
+//endregion
+
+//region Work with logs
+
+function clearLogs(c: IScriptEvent, limit) {
 	try {
 		let context = c.player.UIContext;
 
@@ -341,7 +452,7 @@ function fillLogs(c: IScriptEvent) {
 			max: 200,
 		});
 
-		emptyLogs(c, logLimit);
+		clearLogs(c, logLimit);
 
 		let logs = getLogsWithSelections(c);
 		for (let i in logs) {
@@ -384,82 +495,6 @@ function fillLogs(c: IScriptEvent) {
 	catch (e) {
 		Logger.error(c, e);
 	}
-}
-
-function formFileToggles(root, c) {
-
-	let data = c.getValue('data');
-
-	let fileList = getFiles();
-	let fileTogglesLayout = root.layout();
-	fileTogglesLayout.current.rwh(0.2, 0.5).rx(0, 10).ry(0, 0);
-	let fileTogglesList = fileTogglesLayout.column(4);
-	fileTogglesList.current.rwh(1, 1).scroll().scrollSize(0.05);
-
-	let elem = fileTogglesList.toggle(`All`).h(20).id(`toggleList.All`);
-	elem.state(data ? data.getBoolean(`toggleList.All`) : true);
-
-	addCallback(`toggleList.All`, (c, elementId) => {
-		let togglesList = fileList.map((file) => {
-			return `toggleList.${file.replace('.json', '')}`;
-		});
-		let context = c.player.UIContext;
-		for (let toggle of togglesList) {
-			context.get(toggle).enabled(!context.data.getBoolean(elementId));
-		}
-		updateUI(c);
-	});
-
-	for (let fileName of fileList) {
-		let file = fileName.replace('.json', '');
-		let elem = fileTogglesList.toggle(file).h(20).id(`toggleList.${file}`);
-		elem.state(data ? data.getBoolean(`toggleList.${file}`) : false).enabled(data ? !data.getBoolean('toggleList.All') : false);
-
-		addCallback(`toggleList.${file}`, (c, elementId) => {
-			updateUI(c);
-		});
-	}
-}
-
-function formTypeToggles(root, c) {
-	let data = c.getValue('data');
-	let rememberPeriod = data ? data.getBoolean('period') : false;
-	let typeTogglesLayout = root.layout();
-	typeTogglesLayout.current.rwh(0.2, 0.5).rx(0, 10).ry(1, -10).anchor(0, 1);
-	let typeTogglesList = typeTogglesLayout.column(4);
-	typeTogglesList.current.rwh(1, 1).anchor(0, 1).rxy(0, 1);
-	typeTogglesList.label('Types:').h(10);
-	typeTogglesList.toggle('[2INFO').id('typeList.info').h(20).state(data ? data.getBoolean('typeList.info') : true);
-	typeTogglesList.toggle('[9DEBUG').id('typeList.debug').h(20).state(data ? data.getBoolean('typeList.debug') : true);
-	typeTogglesList.toggle('[4ERROR').id('typeList.error').h(20).state(data ? data.getBoolean('typeList.error') : true);
-
-	let startDate = new Date(0);
-	if (data && rememberPeriod) {
-		startDate = new Date(data.getInt('startDate.year'), data.getInt('startDate.month') - 1, data.getInt('startDate.day'),
-			data.getInt('startDate.hour') + Logger.getUTC(), data.getInt('startDate.minutes'), data.getInt('startDate.seconds'));
-	}
-	dateElement(typeTogglesList, 'Period start:', 'startDate', startDate);
-
-	let endDate = new Date();
-	endDate.setTime(endDate.getTime() + Logger.getUTC() * 60 * 60 * 1000);
-	if (data && rememberPeriod) {
-		endDate = new Date(data.getInt('endDate.year'), data.getInt('endDate.month') - 1, data.getInt('endDate.day'),
-			data.getInt('endDate.hour') + Logger.getUTC(), data.getInt('endDate.minutes'), data.getInt('endDate.seconds'));
-	}
-
-	dateElement(typeTogglesList, 'Period end:', 'endDate', endDate);
-	typeTogglesList.toggle('Remember period').id('period').state(data ? data.getBoolean('period') : false).h(20);
-
-	addCallback('typeList.info', (c, elementId) => {
-		updateUI(c);
-	});
-	addCallback('typeList.debug', (c, elementId) => {
-		updateUI(c);
-	});
-	addCallback('typeList.error', (c, elementId) => {
-		updateUI(c);
-	});
-	typeTogglesList.label('\u00A7cWait...').id('status').labelAnchor(0.5).h(20).background(0xcc000000);
 }
 
 function getLogsWithSelections(c: IScriptEvent) {
@@ -604,102 +639,38 @@ function getFiles() {
 	});
 }
 
+//endregion
+
+//region Utils
+
+function saveContext(player: IScriptPlayer, data: INBTCompound) {
+	let nbt = <INBTCompound>data.copy();
+	if (!nbt.has('dateSortAtoZ')) {
+		nbt.setBoolean('dateSortAtoZ', getContext(player).getBoolean('dateSortAtoZ'));
+	}
+	if (!(<INBTCompound>nbt).has('search.modeRegex')) {
+		nbt.setBoolean('search.modeRegex', getContext(player).getBoolean('search.modeRegex'));
+	}
+	player.states.setString('loggerSettings', nbt.stringify());
+	return nbt;
+}
+
+function getContext(player: IScriptPlayer) {
+	let stateId = 'loggerSettings';
+	let state = player.states.getString(stateId);
+	if (state == '') {
+		return mappet.createCompound();
+	}
+	return mappet.createCompound(state);
+}
+
 function addCallback(id: string, callbackFunction: (c: IScriptEvent, elementId: string) => any) {
-	TL_LOGGER_CALLBACKS[id] = callbackFunction;
+	TL_LoggerCallbacks[id] = callbackFunction;
 }
 
 function updateUI(c) {
 	Async.setTask('fill', () => {
 		fillLogs(c);
-	});
-}
-
-function dateElement(root: IMappetUIBuilder, label: string, dateId: string, defaultDate: Date) {
-	let column = root.column(2);
-	column.current.context('file', `${dateId}.now`, 'Now', 0x474389);
-	column.current.context('leftload', `${dateId}.dayStart`, 'Day start', 0x474389);
-	column.current.context('rightload', `${dateId}.dayEnd`, 'Day end', 0x474389);
-	addCallback(`${dateId}.now`, (c, elementId) => {
-		let context = c.player.UIContext;
-		let date = new Date();
-		let day = date.getUTCDate();
-		let month = date.getUTCMonth() + 1;
-		let year = date.getUTCFullYear();
-		let hour = date.getUTCHours() + Logger.getUTC();
-		let minutes = date.getUTCMinutes();
-		let seconds = date.getUTCSeconds();
-
-
-		let dateId = elementId.split('.')[0];
-		context.get(`${dateId}.day`).value(day);
-		context.get(`${dateId}.month`).value(month);
-		context.get(`${dateId}.year`).value(year);
-		context.get(`${dateId}.hour`).value(hour);
-		context.get(`${dateId}.minutes`).value(minutes);
-		context.get(`${dateId}.seconds`).value(seconds);
-		context.data.setInt(`${dateId}.day`, day);
-		context.data.setInt(`${dateId}.month`, month);
-		context.data.setInt(`${dateId}.year`, year);
-		context.data.setInt(`${dateId}.hour`, hour);
-		context.data.setInt(`${dateId}.minutes`, minutes);
-		context.data.setInt(`${dateId}.seconds`, seconds);
-		updateUI(c);
-	});
-	addCallback(`${dateId}.dayStart`, (c, elementId) => {
-		let context = c.player.UIContext;
-		context.get(`${dateId}.hour`).value(0);
-		context.get(`${dateId}.minutes`).value(0);
-		context.get(`${dateId}.seconds`).value(0);
-		context.data.setInt(`${dateId}.hour`, 0);
-		context.data.setInt(`${dateId}.minutes`, 0);
-		context.data.setInt(`${dateId}.seconds`, 0);
-		updateUI(c);
-	});
-	addCallback(`${dateId}.dayEnd`, (c, elementId) => {
-		let context = c.player.UIContext;
-		context.get(`${dateId}.hour`).value(23);
-		context.get(`${dateId}.minutes`).value(59);
-		context.get(`${dateId}.seconds`).value(59);
-		context.data.setInt(`${dateId}.hour`, 23);
-		context.data.setInt(`${dateId}.minutes`, 59);
-		context.data.setInt(`${dateId}.seconds`, 59);
-		updateUI(c);
-	});
-
-	column.label(label).h(10).marginTop(4);
-
-	let row = column.row(2);
-
-	row.trackpad().limit(1, 31).integer().h(15).value(defaultDate.getUTCDate()).id(`${dateId}.day`).updateDelay(800);
-	addCallback(`${dateId}.day`, (c, elementId) => {
-		updateUI(c);
-	});
-
-	row.trackpad().limit(1, 12).integer().h(15).value(defaultDate.getUTCMonth() + 1).id(`${dateId}.month`).updateDelay(800);
-	addCallback(`${dateId}.month`, (c, elementId) => {
-		updateUI(c);
-	});
-
-	row.trackpad().limit(1970, 4200).integer().h(15).value(defaultDate.getUTCFullYear()).id(`${dateId}.year`).updateDelay(800);
-	addCallback(`${dateId}.year`, (c, elementId) => {
-		updateUI(c);
-	});
-
-	let row2 = column.row(2);
-
-	row2.trackpad().limit(0, 23).integer().h(15).value(defaultDate.getUTCHours()).id(`${dateId}.hour`).updateDelay(800);
-	addCallback(`${dateId}.hour`, (c, elementId) => {
-		updateUI(c);
-	});
-
-	row2.trackpad().limit(0, 59).integer().h(15).value(defaultDate.getUTCMinutes()).id(`${dateId}.minutes`).updateDelay(800);
-	addCallback(`${dateId}.minutes`, (c, elementId) => {
-		updateUI(c);
-	});
-
-	row2.trackpad().limit(0, 59).integer().h(15).value(defaultDate.getUTCSeconds()).id(`${dateId}.seconds`).updateDelay(800);
-	addCallback(`${dateId}.seconds`, (c, elementId) => {
-		updateUI(c);
 	});
 }
 
@@ -710,3 +681,5 @@ function getDate(c: IScriptEvent, dateId: string) {
 	let day = data.getInt(`${dateId}.day`);
 	return new Date(year, month - 1, day);
 }
+
+//endregion
