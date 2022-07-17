@@ -65,27 +65,37 @@ var Logger = /** @class */ (function () {
 }());
 var logEntry = /** @class */ (function () {
     function logEntry(type, c, message) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+        var _a, _b, _c, _d;
         var date = new Date();
         date.setTime(date.getTime() + Logger.getUTC() * 60 * 60 * 1000);
+        var s = (_a = c === null || c === void 0 ? void 0 : c.subject) !== null && _a !== void 0 ? _a : null;
+        var subject;
+        if (s) {
+            subject = {
+                name: s.name,
+                uuid: s.uniqueId,
+                x: s.position.x,
+                y: s.position.y,
+                z: s.position.z,
+            };
+        }
+        var o = (_b = c === null || c === void 0 ? void 0 : c.object) !== null && _b !== void 0 ? _b : null;
+        var object;
+        if (o) {
+            object = {
+                name: o.name,
+                uuid: o.uniqueId,
+                x: o.position.x,
+                y: o.position.y,
+                z: o.position.z,
+            };
+        }
         this.data = {
             date: date.getTime(),
-            script: c.script,
-            function: c.function,
-            subject: {
-                name: (_a = c.subject) === null || _a === void 0 ? void 0 : _a.name,
-                uuid: (_b = c.subject) === null || _b === void 0 ? void 0 : _b.uniqueId,
-                x: (_c = c.subject) === null || _c === void 0 ? void 0 : _c.position.x,
-                y: (_d = c.subject) === null || _d === void 0 ? void 0 : _d.position.y,
-                z: (_e = c.subject) === null || _e === void 0 ? void 0 : _e.position.z,
-            },
-            object: {
-                name: (_f = c.object) === null || _f === void 0 ? void 0 : _f.name,
-                uuid: (_g = c.object) === null || _g === void 0 ? void 0 : _g.uniqueId,
-                x: (_h = c.object) === null || _h === void 0 ? void 0 : _h.position.x,
-                y: (_j = c.object) === null || _j === void 0 ? void 0 : _j.position.y,
-                z: (_k = c.object) === null || _k === void 0 ? void 0 : _k.position.z,
-            },
+            script: (_c = c === null || c === void 0 ? void 0 : c.script) !== null && _c !== void 0 ? _c : 'unknown',
+            function: (_d = c === null || c === void 0 ? void 0 : c.function) !== null && _d !== void 0 ? _d : 'unknown',
+            subject: subject,
+            object: object,
             type: type,
             message: message.stack ? message.stack : message,
         };
@@ -122,7 +132,52 @@ var TL_LoggerCallbacks = {};
 //region Mappet functions
 // @ts-ignore
 function main(c) {
-    Async.setTask('fill', function () {
+    try {
+        Task.define(function () {
+            createUI(c);
+        }).then(function () {
+            fillLogs(c);
+        });
+    }
+    catch (e) {
+        Logger.error(c, e);
+    }
+}
+function TL_LoggerHandler(c) {
+    try {
+        var context = c.player.UIContext;
+        var last = context.last;
+        if (last && TL_LoggerCallbacks[last]) {
+            TL_LoggerCallbacks[last].function(c, last);
+            if (TL_LoggerCallbacks[last].update) {
+                updateUI(c);
+            }
+        }
+        if (last == '' && context.context && TL_LoggerCallbacks[context.context]) {
+            TL_LoggerCallbacks[context.context].function(c, context.context);
+            if (TL_LoggerCallbacks[context.context].update) {
+                updateUI(c);
+            }
+        }
+        if (context.hotkey == 'F5' || last == 'form') {
+            saveContext(c.player, context.data);
+        }
+        if (context.isClosed() && last == '') {
+            saveContext(c.player, context.data);
+        }
+        else if (!TL_LoggerCallbacks[last] && !TL_LoggerCallbacks[context.context]) {
+            updateUI(c);
+        }
+    }
+    catch (e) {
+        Logger.error(c, e);
+    }
+}
+//endregion
+//region Forming a UI modules
+function createUI(c, show) {
+    if (show === void 0) { show = true; }
+    try {
         var thisStorage = new SettingStorage('TL-LOGGER');
         var debug = thisStorage.get('debug', 'Debug', 'Print debug logs when open UI.', SettingType.BOOLEAN, false);
         if (debug) {
@@ -133,50 +188,69 @@ function main(c) {
                 ' debug log! This is a very very long debug log! This is a very very long debug log! This is a very very long debug log!');
         }
         c.setValue('data', getContext(c.player));
-        var root = formBaseUI(c);
-        c.player.openUI(root, true);
-    });
-    Async.setTask('fill', function () {
-        fillLogs(c);
-    });
-}
-function TL_LoggerHandler(c) {
-    try {
-        var context = c.player.UIContext;
-        var last = context.last;
-        if (last && TL_LoggerCallbacks[last]) {
-            TL_LoggerCallbacks[last](c, last);
-        }
-        if (last == '' && context.context && TL_LoggerCallbacks[context.context]) {
-            TL_LoggerCallbacks[context.context](c, context.context);
-        }
-        if (context.hotkey == 'F5' || last == 'form') {
-            saveContext(c.player, context.data);
-        }
-        if (context.isClosed() && last == '') {
-            saveContext(c.player, context.data);
-        }
-        else {
-            updateUI(c);
+        var root = mappet.createUI(c, 'TL_LoggerHandler').background();
+        var baseUI = formBaseUI(root, c);
+        var logOptionsUI = formLogOptionsUI(root, c);
+        if (show) {
+            c.player.openUI(root, true);
         }
     }
     catch (e) {
         Logger.error(c, e);
     }
 }
-//endregion
-//region Forming a UI modules
-function formBaseUI(c) {
-    var root = mappet.createUI(c, 'TL_LoggerHandler').background();
-    root.current.keybind(63, 'F5', 'F5');
-    formFileToggles(root, c);
-    formTypeToggles(root, c);
-    var layout = root.layout();
+function formBaseUI(root, c) {
+    var baseLayout = root.layout();
+    baseLayout.current.rwh(1, 1).id('baseLayout');
+    //baseLayout.current.keybind(63, 'F5', 'F5');
+    formFileToggles(baseLayout, c);
+    formTypeToggles(baseLayout, c);
+    var layout = baseLayout.layout();
     layout.current.rx(0.2, 20).rwh(0.75, 1);
     formEmptyLogs(layout, c);
     formAbove(layout, c);
     formUnder(layout);
-    return root;
+    return baseLayout;
+}
+function formLogOptionsUI(root, c) {
+    var logOptionsLayout = root.layout();
+    logOptionsLayout.current.rwh(1, 1).id('logOptionsLayout').enabled(false).visible(false).tooltip('\u00A70.');
+    //background shading
+    var graphic = logOptionsLayout.graphics();
+    graphic.rwh(1, 1).rxy(0, 0);
+    graphic.rect(-100, -100, 8000, 8000, 0xcc000000);
+    //options
+    var column = logOptionsLayout.column(4, 10);
+    column.current.rwh(0.8, 0.8).rxy(0.5, 0.5).anchor(0.5, 0.5);
+    var entitesRow = column.row(4, 10);
+    entitesRow.current.rh(0.5);
+    var subjectCol = entitesRow.column(4);
+    subjectCol.label('==SUBJECT==').h(20).labelAnchor(0.5, 0.5);
+    subjectCol.label('==').id('options.subject.status').h(20).labelAnchor(0.5, 0.5);
+    subjectCol.label('Name:').h(20).labelAnchor(0, 0.5);
+    subjectCol.textbox('').h(20).id('options.subject.name').maxLength(100);
+    subjectCol.label('UUID:').h(20).labelAnchor(0, 0.5);
+    subjectCol.textbox('').h(20).id('options.subject.uuid').maxLength(100);
+    subjectCol.label('Coords:').h(20).labelAnchor(0, 0.5);
+    subjectCol.textbox('').h(20).id('options.subject.pos').maxLength(100);
+    subjectCol.button('TP to ').h(20).id('options.subject.tp');
+    var objectRow = entitesRow.column(4);
+    objectRow.label('==OBJECT==').h(20).labelAnchor(0.5, 0.5);
+    objectRow.label('==').id('options.object.status').h(20).labelAnchor(0.5, 0.5);
+    objectRow.label('Name:').h(20).labelAnchor(0, 0.5);
+    objectRow.textbox('').h(20).id('options.object.name').maxLength(100);
+    objectRow.label('UUID:').h(20).labelAnchor(0, 0.5);
+    objectRow.textbox('').h(20).id('options.object.uuid').maxLength(100);
+    objectRow.label('Coords:').h(20).labelAnchor(0, 0.5);
+    objectRow.textbox('').h(20).id('options.object.pos').maxLength(100);
+    objectRow.button('TP to ').h(20).id('options.object.tp');
+    var returnRow = column.row(4, 40);
+    returnRow.button('return').wh(120, 20).id('logOptionsLayout.return');
+    addCallback('logOptionsLayout.return', function (c, elementId) {
+        var context = c.player.UIContext;
+        context.get('baseLayout').enabled(true);
+        context.get('logOptionsLayout').enabled(false).visible(false);
+    }, false);
 }
 function formEmptyLogs(root, c) {
     try {
@@ -192,8 +266,12 @@ function formEmptyLogs(root, c) {
             row.current.h(0).visible(false).margin(0).id("log.layout." + i).rw(1);
             var text = row.text('');
             text.h(0).visible(false).margin(0).id("log.label." + i).rw(1);
-            row.current.context('download', "log.subject.tp." + i, 'TP to subject', 0x474389);
-            row.current.context('download', "log.object.tp." + i, 'TP to object', 0x474389);
+            row.current.context('download', "log.more." + i, 'More...', 0x474389);
+            addCallback("log.more." + i, function (c, elementId) {
+                var context = c.player.UIContext;
+                context.get('baseLayout').enabled(false);
+                context.get('logOptionsLayout').enabled(true).visible(true);
+            }, false);
         }
     }
     catch (e) {
@@ -282,13 +360,13 @@ function formTypeToggles(root, c) {
     typeTogglesList.toggle('[4ERROR').id('typeList.error').h(20).state(data ? data.getBoolean('typeList.error') : true);
     var startDate = new Date(0);
     if (data && rememberPeriod) {
-        startDate = new Date(data.getInt('startDate.year'), data.getInt('startDate.month') - 1, data.getInt('startDate.day'), data.getInt('startDate.hour') + Logger.getUTC(), data.getInt('startDate.minutes'), data.getInt('startDate.seconds'));
+        startDate = new Date(data.getInt('startDate.year'), data.getInt('startDate.month') - 1, data.getInt('startDate.day'), data.getInt('startDate.hour') + Logger.getUTC() + 1, data.getInt('startDate.minutes'), data.getInt('startDate.seconds'));
     }
     dateElement(typeTogglesList, 'Period start:', 'startDate', startDate);
     var endDate = new Date();
     endDate.setTime(endDate.getTime() + Logger.getUTC() * 60 * 60 * 1000);
     if (data && rememberPeriod) {
-        endDate = new Date(data.getInt('endDate.year'), data.getInt('endDate.month') - 1, data.getInt('endDate.day'), data.getInt('endDate.hour') + Logger.getUTC(), data.getInt('endDate.minutes'), data.getInt('endDate.seconds'));
+        endDate = new Date(data.getInt('endDate.year'), data.getInt('endDate.month') - 1, data.getInt('endDate.day'), data.getInt('endDate.hour') + Logger.getUTC() + 1, data.getInt('endDate.minutes'), data.getInt('endDate.seconds'));
     }
     dateElement(typeTogglesList, 'Period end:', 'endDate', endDate);
     typeTogglesList.toggle('Remember period').id('period').state(data ? data.getBoolean('period') : false).h(20);
@@ -305,7 +383,7 @@ function dateElement(root, label, dateId, defaultDate) {
         var day = date.getUTCDate();
         var month = date.getUTCMonth() + 1;
         var year = date.getUTCFullYear();
-        var hour = date.getUTCHours() + Logger.getUTC();
+        var hour = date.getUTCHours() + Logger.getUTC() + 1;
         var minutes = date.getUTCMinutes();
         var seconds = date.getUTCSeconds();
         var dateId = elementId.split('.')[0];
@@ -365,6 +443,7 @@ function clearLogs(c, limit) {
     }
 }
 function fillLogs(c) {
+    var _a, _b, _c, _d, _e, _f;
     try {
         var context = c.player.UIContext;
         context.get('status').label('\u00A7cWait...');
@@ -378,10 +457,10 @@ function fillLogs(c) {
         });
         clearLogs(c, logLimit);
         var logs = getLogsWithSelections(c);
-        for (var i in logs) {
+        var _loop_1 = function (i) {
             var log = logs[i];
             if (i >= logLimit) {
-                break;
+                return "break";
             }
             var layout = context.get("log.layout." + i);
             var text = context.get("log.label." + i);
@@ -390,17 +469,17 @@ function fillLogs(c) {
             var tooltip = "[7Subject:\n";
             var s = log.subject;
             var o = log.object;
-            if (s.name) {
+            if (s) {
                 tooltip += "[7Name:\n  [e" + s.name + "\n";
-                tooltip += "[7At:\n  [e" + s.x.toFixed(3) + " " + s.y.toFixed(3) + " " + s.z.toFixed(3) + "\n";
+                tooltip += "[7At:\n  [e" + ((_a = s.x) === null || _a === void 0 ? void 0 : _a.toFixed(3)) + " " + ((_b = s.y) === null || _b === void 0 ? void 0 : _b.toFixed(3)) + " " + ((_c = s.z) === null || _c === void 0 ? void 0 : _c.toFixed(3)) + "\n";
             }
             else {
                 tooltip += 'null';
             }
             tooltip += '[7============\nObject:\n';
-            if (o.name) {
+            if (o) {
                 tooltip += "[7Name:\n  [e" + o.name + "\n";
-                tooltip += "[7At:\n  [e" + o.x.toFixed(3) + " " + o.y.toFixed(3) + " " + o.z.toFixed(3) + "\n";
+                tooltip += "[7At:\n  [e" + ((_d = o.x) === null || _d === void 0 ? void 0 : _d.toFixed(3)) + " " + ((_e = o.y) === null || _e === void 0 ? void 0 : _e.toFixed(3)) + " " + ((_f = o.z) === null || _f === void 0 ? void 0 : _f.toFixed(3)) + "\n";
             }
             else {
                 tooltip += 'null';
@@ -410,6 +489,97 @@ function fillLogs(c) {
             var textWithoutColor = logText.replace(new RegExp('\u00A7.', 'g'), '');
             var height = (textWithoutColor.length / 135) > 1 ? 20 + 11 * (Math.round(textWithoutColor.length / 135)) : 20;
             layout.h(height).visible(true).margin(4);
+            addCallback("log.more." + i, function (c, elementId) {
+                var _a, _b;
+                var context = c.player.UIContext;
+                context.get('baseLayout').enabled(false);
+                context.get('logOptionsLayout').enabled(true).visible(true);
+                var subjectEntity;
+                var subjectName;
+                var subjectUUID;
+                var subjectPos;
+                if (s) {
+                    subjectEntity = (_a = c.server) === null || _a === void 0 ? void 0 : _a.getEntity(s.uuid);
+                    subjectName = s.name;
+                    subjectUUID = s.uuid;
+                    subjectPos = s.x.toFixed(3) + " " + s.y.toFixed(3) + " " + s.z.toFixed(3);
+                }
+                var color = subjectEntity ? "\u00A7a" : "\u00A7c";
+                var online = subjectEntity ? "Online" : "Offline";
+                var type = (subjectEntity === null || subjectEntity === void 0 ? void 0 : subjectEntity.isPlayer()) ? "Player" : "Entity";
+                var status = color + "Status: " + online + "(" + type + ")";
+                context.get('options.subject.status').label(status);
+                context.get('options.subject.name').label(subjectName !== null && subjectName !== void 0 ? subjectName : '');
+                context.get('options.subject.uuid').label(subjectUUID !== null && subjectUUID !== void 0 ? subjectUUID : '');
+                context.get('options.subject.pos').label(subjectPos !== null && subjectPos !== void 0 ? subjectPos : '');
+                context.get('options.subject.tp').label("TP to: " + subjectName).enabled(s);
+                var objectEntity;
+                var objectName;
+                var objectUUID;
+                var objectPos;
+                if (o) {
+                    objectEntity = (_b = c.server) === null || _b === void 0 ? void 0 : _b.getEntity(o.uuid);
+                    objectName = o.name;
+                    objectUUID = o.uuid;
+                    objectPos = o.x.toFixed(3) + " " + o.y.toFixed(3) + " " + o.z.toFixed(3);
+                }
+                color = objectEntity ? "\u00A7a" : "\u00A7c";
+                online = objectEntity ? "Online" : "Offline";
+                type = (objectEntity === null || objectEntity === void 0 ? void 0 : objectEntity.isPlayer()) ? "Player" : "Entity";
+                status = color + "Status: " + online + "(" + type + ")";
+                context.get('options.object.status').label(status);
+                context.get('options.object.name').label(objectName !== null && objectName !== void 0 ? objectName : '');
+                context.get('options.object.uuid').label(objectUUID !== null && objectUUID !== void 0 ? objectUUID : '');
+                context.get('options.object.pos').label(objectPos !== null && objectPos !== void 0 ? objectPos : '');
+                context.get('options.object.tp').label("TP to: " + objectName).enabled(o);
+                addCallback('options.subject.tp', function (c, elementId) {
+                    var x = s.x;
+                    var y = s.y;
+                    var z = s.z;
+                    if (x == undefined || y == undefined || z == undefined || c.server.getEntity(s.uuid) == undefined) {
+                        c.player.UIContext.get('options.subject.tp').label("\u00A7cCan't tp to this entity...");
+                        c.player.UIContext.sendToPlayer();
+                        Task.define(function () {
+                            c.player.UIContext.get('options.subject.tp').label("TP to: " + s.name);
+                            c.player.UIContext.sendToPlayer();
+                        }, 2000);
+                    }
+                    c.player.setPosition(x, y, z);
+                    c.player.UIContext.get('options.subject.tp').label("\u00A7aTeleported");
+                    c.player.UIContext.sendToPlayer();
+                    Task.define(function () {
+                        c.player.UIContext.get('options.subject.tp').label("TP to: " + s.name);
+                        c.player.UIContext.sendToPlayer();
+                    }, 2000);
+                }, false);
+                addCallback('options.object.tp', function (c, elementId) {
+                    var x = o.x;
+                    var y = o.y;
+                    var z = o.z;
+                    if (x == undefined || y == undefined || z == undefined || c.server.getEntity(o.uuid) == undefined) {
+                        c.player.UIContext.get('options.object.tp').label("\u00A7cCan't tp to this entity...");
+                        c.player.UIContext.sendToPlayer();
+                        Task.define(function () {
+                            c.player.UIContext.get('options.object.tp').label("TP to: " + o.name);
+                            c.player.UIContext.sendToPlayer();
+                        }, 2000);
+                    }
+                    else {
+                        c.player.setPosition(x, y, z);
+                        c.player.UIContext.get('options.object.tp').label("\u00A7aTeleported");
+                        c.player.UIContext.sendToPlayer();
+                        Task.define(function () {
+                            c.player.UIContext.get('options.object.tp').label("TP to: " + o.name);
+                            c.player.UIContext.sendToPlayer();
+                        }, 2000);
+                    }
+                }, false);
+            }, false);
+        };
+        for (var i in logs) {
+            var state_1 = _loop_1(i);
+            if (state_1 === "break")
+                break;
         }
         context.get('status').label('\u00A7aLogs loaded!');
         context.sendToPlayer();
@@ -452,11 +622,12 @@ function getLogsWithSelections(c) {
             return a.date - b.date;
         }
     }).filter(function (entry) {
+        var _a, _b, _c, _d;
         if (data.getBoolean('search.modeRegex')) {
-            return entry.message.match(new RegExp(data.getString('searchbar'))) != null;
+            return entry.message.concat('↨', (_a = entry.subject) === null || _a === void 0 ? void 0 : _a.name).concat('↨', (_b = entry.object) === null || _b === void 0 ? void 0 : _b.name).match(new RegExp(data.getString('searchbar'))) != null;
         }
         else {
-            return entry.message.indexOf(data.getString('searchbar')) !== -1;
+            return entry.message.concat('↨', (_c = entry.subject) === null || _c === void 0 ? void 0 : _c.name).concat('↨', (_d = entry.object) === null || _d === void 0 ? void 0 : _d.name).indexOf(data.getString('searchbar')) !== -1;
         }
     }).map(function (entry) {
         var regex = data.getBoolean('search.modeRegex');
@@ -562,11 +733,15 @@ function getContext(player) {
     }
     return mappet.createCompound(state);
 }
-function addCallback(id, callbackFunction) {
-    TL_LoggerCallbacks[id] = callbackFunction;
+function addCallback(id, callbackFunction, doUpdate) {
+    if (doUpdate === void 0) { doUpdate = true; }
+    TL_LoggerCallbacks[id] = {
+        function: callbackFunction,
+        update: doUpdate,
+    };
 }
 function updateUI(c) {
-    Async.setTask('fill', function () {
+    Task.define(function () {
         fillLogs(c);
     });
 }

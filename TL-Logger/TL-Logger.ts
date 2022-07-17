@@ -79,30 +79,45 @@ type error = {
 	stack: string;
 };
 
+
 class logEntry {
 	private data: any;
 
-	constructor(type: string, c: IScriptEvent, message: string | error) {
+	constructor(type: string, c: IScriptEvent | null, message: string | error) {
 		let date = new Date();
 		date.setTime(date.getTime() + Logger.getUTC() * 60 * 60 * 1000);
+
+		let s = c?.subject ?? null;
+		let subject;
+		if(s){
+			subject = {
+				name: s.name,
+				uuid: s.uniqueId,
+				x: s.position.x,
+				y: s.position.y,
+				z: s.position.z,
+			}
+		}
+
+		let o = c?.object ?? null;
+		let object;
+		if(o){
+			object = {
+				name: o.name,
+				uuid: o.uniqueId,
+				x: o.position.x,
+				y: o.position.y,
+				z: o.position.z,
+			}
+		}
+
+
 		this.data = {
 			date: date.getTime(),
-			script: c.script,
-			function: c.function,
-			subject: {
-				name: c.subject?.name,
-				uuid: c.subject?.uniqueId,
-				x: c.subject?.position.x,
-				y: c.subject?.position.y,
-				z: c.subject?.position.z,
-			},
-			object: {
-				name: c.object?.name,
-				uuid: c.object?.uniqueId,
-				x: c.object?.position.x,
-				y: c.object?.position.y,
-				z: c.object?.position.z,
-			},
+			script: c?.script ?? 'unknown',
+			function: c?.function ?? 'unknown',
+			subject: subject,
+			object: object,
 			type: type,
 			message: (<error>message).stack ? (<error>message).stack : message,
 		};
@@ -148,27 +163,16 @@ let TL_LoggerCallbacks = {};
 
 // @ts-ignore
 function main(c: IScriptEvent) {
-	Async.setTask('fill', () => {
-		let thisStorage = new SettingStorage('TL-LOGGER');
-		let debug = thisStorage.get('debug', 'Debug', 'Print debug logs when open UI.', SettingType.BOOLEAN, false);
-
-		if (debug) {
-			Logger.debug(c, 'Logger must work!');
-			Logger.debug(c, 'This is a very very long debug log! This is a very very long debug log! This is a very very long debug log!' +
-				' This is a very very long debug log! This is a very very long debug log! This is a very very long debug log! This is a very' +
-				' very long debug log! This is a very very long debug log! This is a very very long debug log! This is a very very long' +
-				' debug log! This is a very very long debug log! This is a very very long debug log! This is a very very long debug log!');
-		}
-
-		c.setValue('data', getContext(c.player));
-
-		let root = formBaseUI(c);
-
-		c.player.openUI(root, true);
-	});
-	Async.setTask('fill', () => {
-		fillLogs(c);
-	});
+	try {
+		Task.define(() => {
+			createUI(c);
+		}).then(() => {
+			fillLogs(c);
+		});
+	}
+	catch (e) {
+		Logger.error(c, e);
+	}
 }
 
 function TL_LoggerHandler(c: IScriptEvent) {
@@ -176,10 +180,16 @@ function TL_LoggerHandler(c: IScriptEvent) {
 		let context = c.player.UIContext;
 		let last = context.last;
 		if (last && TL_LoggerCallbacks[last]) {
-			TL_LoggerCallbacks[last](c, last);
+			TL_LoggerCallbacks[last].function(c, last);
+			if (TL_LoggerCallbacks[last].update) {
+				updateUI(c);
+			}
 		}
 		if (last == '' && context.context && TL_LoggerCallbacks[context.context]) {
-			TL_LoggerCallbacks[context.context](c, context.context);
+			TL_LoggerCallbacks[context.context].function(c, context.context);
+			if (TL_LoggerCallbacks[context.context].update) {
+				updateUI(c);
+			}
 		}
 		if (context.hotkey == 'F5' || last == 'form') {
 			saveContext(c.player, context.data);
@@ -187,7 +197,7 @@ function TL_LoggerHandler(c: IScriptEvent) {
 		if (context.isClosed() && last == '') {
 			saveContext(c.player, context.data);
 		}
-		else{
+		else if (!TL_LoggerCallbacks[last] && !TL_LoggerCallbacks[context.context]) {
 			updateUI(c);
 		}
 	}
@@ -200,17 +210,94 @@ function TL_LoggerHandler(c: IScriptEvent) {
 
 //region Forming a UI modules
 
-function formBaseUI(c) {
-	let root = mappet.createUI(c, 'TL_LoggerHandler').background();
-	root.current.keybind(63, 'F5', 'F5');
-	formFileToggles(root, c);
-	formTypeToggles(root, c);
-	let layout = root.layout();
+function createUI(c: IScriptEvent, show: boolean = true) {
+	try {
+		let thisStorage = new SettingStorage('TL-LOGGER');
+		let debug = thisStorage.get('debug', 'Debug', 'Print debug logs when open UI.', SettingType.BOOLEAN, false);
+
+		if (debug) {
+			Logger.debug(c, 'Logger must work!');
+			Logger.debug(c, 'This is a very very long debug log! This is a very very long debug log! This is a very very long debug log!' +
+				' This is a very very long debug log! This is a very very long debug log! This is a very very long debug log! This is a very' +
+				' very long debug log! This is a very very long debug log! This is a very very long debug log! This is a very very long' +
+				' debug log! This is a very very long debug log! This is a very very long debug log! This is a very very long debug log!');
+		}
+
+		c.setValue('data', getContext(c.player));
+		let root = mappet.createUI(c, 'TL_LoggerHandler').background();
+		let baseUI = formBaseUI(root, c);
+
+		let logOptionsUI = formLogOptionsUI(root, c);
+
+		if (show) {
+			c.player.openUI(root, true);
+		}
+	}
+	catch (e) {
+		Logger.error(c, e);
+	}
+}
+
+function formBaseUI(root, c) {
+	let baseLayout = root.layout();
+	baseLayout.current.rwh(1, 1).id('baseLayout');
+	//baseLayout.current.keybind(63, 'F5', 'F5');
+	formFileToggles(baseLayout, c);
+	formTypeToggles(baseLayout, c);
+	let layout = baseLayout.layout();
 	layout.current.rx(0.2, 20).rwh(0.75, 1);
 	formEmptyLogs(layout, c);
 	formAbove(layout, c);
 	formUnder(layout);
-	return root;
+	return baseLayout;
+}
+
+function formLogOptionsUI(root, c) {
+	let logOptionsLayout = root.layout();
+	logOptionsLayout.current.rwh(1, 1).id('logOptionsLayout').enabled(false).visible(false).tooltip('\u00A70.');
+
+	//background shading
+
+	let graphic = logOptionsLayout.graphics();
+	graphic.rwh(1, 1).rxy(0, 0);
+	graphic.rect(-100, -100, 8000, 8000, 0xcc000000);
+
+	//options
+
+	let column = logOptionsLayout.column(4, 10);
+	column.current.rwh(0.8, 0.8).rxy(0.5, 0.5).anchor(0.5, 0.5);
+
+	let entitesRow = column.row(4, 10);
+	entitesRow.current.rh(0.5);
+	let subjectCol = entitesRow.column(4);
+	subjectCol.label('==SUBJECT==').h(20).labelAnchor(0.5, 0.5);
+	subjectCol.label('==').id('options.subject.status').h(20).labelAnchor(0.5, 0.5);
+	subjectCol.label('Name:').h(20).labelAnchor(0, 0.5);
+	subjectCol.textbox('').h(20).id('options.subject.name').maxLength(100);
+	subjectCol.label('UUID:').h(20).labelAnchor(0, 0.5);
+	subjectCol.textbox('').h(20).id('options.subject.uuid').maxLength(100);
+	subjectCol.label('Coords:').h(20).labelAnchor(0, 0.5);
+	subjectCol.textbox('').h(20).id('options.subject.pos').maxLength(100);
+	subjectCol.button('TP to ').h(20).id('options.subject.tp');
+
+	let objectRow = entitesRow.column(4);
+	objectRow.label('==OBJECT==').h(20).labelAnchor(0.5, 0.5);
+	objectRow.label('==').id('options.object.status').h(20).labelAnchor(0.5, 0.5);
+	objectRow.label('Name:').h(20).labelAnchor(0, 0.5);
+	objectRow.textbox('').h(20).id('options.object.name').maxLength(100);
+	objectRow.label('UUID:').h(20).labelAnchor(0, 0.5);
+	objectRow.textbox('').h(20).id('options.object.uuid').maxLength(100);
+	objectRow.label('Coords:').h(20).labelAnchor(0, 0.5);
+	objectRow.textbox('').h(20).id('options.object.pos').maxLength(100);
+	objectRow.button('TP to ').h(20).id('options.object.tp');
+
+	let returnRow = column.row(4, 40);
+	returnRow.button('return').wh(120, 20).id('logOptionsLayout.return');
+	addCallback('logOptionsLayout.return', (c, elementId) => {
+		let context = c.player.UIContext;
+		context.get('baseLayout').enabled(true);
+		context.get('logOptionsLayout').enabled(false).visible(false);
+	}, false);
 }
 
 function formEmptyLogs(root, c) {
@@ -227,8 +314,12 @@ function formEmptyLogs(root, c) {
 			row.current.h(0).visible(false).margin(0).id(`log.layout.${i}`).rw(1);
 			let text = row.text('');
 			text.h(0).visible(false).margin(0).id(`log.label.${i}`).rw(1);
-			row.current.context('download', `log.subject.tp.${i}`, 'TP to subject', 0x474389);
-			row.current.context('download', `log.object.tp.${i}`, 'TP to object', 0x474389);
+			row.current.context('download', `log.more.${i}`, 'More...', 0x474389);
+			addCallback(`log.more.${i}`, (c, elementId) => {
+				let context = c.player.UIContext;
+				context.get('baseLayout').enabled(false);
+				context.get('logOptionsLayout').enabled(true).visible(true);
+			}, false);
 		}
 	}
 	catch (e) {
@@ -336,7 +427,7 @@ function formTypeToggles(root, c) {
 	let startDate = new Date(0);
 	if (data && rememberPeriod) {
 		startDate = new Date(data.getInt('startDate.year'), data.getInt('startDate.month') - 1, data.getInt('startDate.day'),
-			data.getInt('startDate.hour') + Logger.getUTC(), data.getInt('startDate.minutes'), data.getInt('startDate.seconds'));
+			data.getInt('startDate.hour') + Logger.getUTC() + 1, data.getInt('startDate.minutes'), data.getInt('startDate.seconds'));
 	}
 	dateElement(typeTogglesList, 'Period start:', 'startDate', startDate);
 
@@ -344,7 +435,7 @@ function formTypeToggles(root, c) {
 	endDate.setTime(endDate.getTime() + Logger.getUTC() * 60 * 60 * 1000);
 	if (data && rememberPeriod) {
 		endDate = new Date(data.getInt('endDate.year'), data.getInt('endDate.month') - 1, data.getInt('endDate.day'),
-			data.getInt('endDate.hour') + Logger.getUTC(), data.getInt('endDate.minutes'), data.getInt('endDate.seconds'));
+			data.getInt('endDate.hour') + Logger.getUTC() + 1, data.getInt('endDate.minutes'), data.getInt('endDate.seconds'));
 	}
 
 	dateElement(typeTogglesList, 'Period end:', 'endDate', endDate);
@@ -363,7 +454,7 @@ function dateElement(root: IMappetUIBuilder, label: string, dateId: string, defa
 		let day = date.getUTCDate();
 		let month = date.getUTCMonth() + 1;
 		let year = date.getUTCFullYear();
-		let hour = date.getUTCHours() + Logger.getUTC();
+		let hour = date.getUTCHours() + Logger.getUTC() + 1;
 		let minutes = date.getUTCMinutes();
 		let seconds = date.getUTCSeconds();
 
@@ -467,17 +558,17 @@ function fillLogs(c: IScriptEvent) {
 			let tooltip = `[7Subject:\n`;
 			let s = log.subject;
 			let o = log.object;
-			if (s.name) {
+			if (s) {
 				tooltip += `[7Name:\n  [e${s.name}\n`;
-				tooltip += `[7At:\n  [e${s.x.toFixed(3)} ${s.y.toFixed(3)} ${s.z.toFixed(3)}\n`;
+				tooltip += `[7At:\n  [e${s.x?.toFixed(3)} ${s.y?.toFixed(3)} ${s.z?.toFixed(3)}\n`;
 			}
 			else {
 				tooltip += 'null';
 			}
 			tooltip += '[7============\nObject:\n';
-			if (o.name) {
+			if (o) {
 				tooltip += `[7Name:\n  [e${o.name}\n`;
-				tooltip += `[7At:\n  [e${o.x.toFixed(3)} ${o.y.toFixed(3)} ${o.z.toFixed(3)}\n`;
+				tooltip += `[7At:\n  [e${o.x?.toFixed(3)} ${o.y?.toFixed(3)} ${o.z?.toFixed(3)}\n`;
 			}
 			else {
 				tooltip += 'null';
@@ -488,6 +579,109 @@ function fillLogs(c: IScriptEvent) {
 
 			let height = (textWithoutColor.length / 135) > 1 ? 20 + 11 * (Math.round(textWithoutColor.length / 135)) : 20;
 			layout.h(height).visible(true).margin(4);
+
+			addCallback(`log.more.${i}`, (c, elementId) => {
+				let context = c.player.UIContext;
+				context.get('baseLayout').enabled(false);
+				context.get('logOptionsLayout').enabled(true).visible(true);
+
+
+				let subjectEntity;
+				let subjectName;
+				let subjectUUID;
+				let subjectPos;
+				if(s){
+
+					subjectEntity = c.server?.getEntity(s.uuid);
+					subjectName = s.name;
+					subjectUUID = s.uuid;
+					subjectPos = `${s.x.toFixed(3)} ${s.y.toFixed(3)} ${s.z.toFixed(3)}`;
+				}
+				let color = subjectEntity ? `\u00A7a` : `\u00A7c`;
+				let online = subjectEntity ? `Online` : `Offline`;
+				let type = subjectEntity?.isPlayer() ? "Player" : "Entity";
+				let status = `${color}Status: ${online}(${type})`;
+				context.get('options.subject.status').label(status);
+
+				context.get('options.subject.name').label(subjectName ?? '');
+				context.get('options.subject.uuid').label(subjectUUID ?? '');
+				context.get('options.subject.pos').label(subjectPos ?? '');
+				context.get('options.subject.tp').label(`TP to: ${subjectName}`).enabled(s);
+
+				let objectEntity;
+				let objectName;
+				let objectUUID;
+				let objectPos;
+				if(o){
+
+					objectEntity = c.server?.getEntity(o.uuid);
+					objectName = o.name;
+					objectUUID = o.uuid;
+					objectPos = `${o.x.toFixed(3)} ${o.y.toFixed(3)} ${o.z.toFixed(3)}`;
+				}
+				color = objectEntity ? `\u00A7a` : `\u00A7c`;
+				online = objectEntity ? `Online` : `Offline`;
+				type = objectEntity?.isPlayer() ? "Player" : "Entity";
+				status = `${color}Status: ${online}(${type})`;
+				context.get('options.object.status').label(status);
+
+
+
+				context.get('options.object.name').label(objectName ?? '');
+				context.get('options.object.uuid').label(objectUUID ?? '');
+				context.get('options.object.pos').label(objectPos ?? '');
+				context.get('options.object.tp').label(`TP to: ${objectName}`).enabled(o);
+
+				addCallback('options.subject.tp', (c, elementId) => {
+					let x = s.x;
+					let y = s.y;
+					let z = s.z;
+
+
+					if (x == undefined || y == undefined || z == undefined || c.server.getEntity(s.uuid) == undefined) {
+						c.player.UIContext.get('options.subject.tp').label(`\u00A7cCan't tp to this entity...`);
+						c.player.UIContext.sendToPlayer();
+						Task.define(() => {
+							c.player.UIContext.get('options.subject.tp').label(`TP to: ${s.name}`);
+							c.player.UIContext.sendToPlayer();
+						}, 2000);
+					}
+					c.player.setPosition(x, y, z);
+					c.player.UIContext.get('options.subject.tp').label(`\u00A7aTeleported`);
+					c.player.UIContext.sendToPlayer();
+					Task.define(() => {
+						c.player.UIContext.get('options.subject.tp').label(`TP to: ${s.name}`);
+						c.player.UIContext.sendToPlayer();
+					}, 2000);
+				}, false);
+
+				addCallback('options.object.tp', (c, elementId) => {
+					let x = o.x;
+					let y = o.y;
+					let z = o.z;
+
+
+					if (x == undefined || y == undefined || z == undefined || c.server.getEntity(o.uuid) == undefined) {
+						c.player.UIContext.get('options.object.tp').label(`\u00A7cCan't tp to this entity...`);
+						c.player.UIContext.sendToPlayer();
+						Task.define(() => {
+							c.player.UIContext.get('options.object.tp').label(`TP to: ${o.name}`);
+							c.player.UIContext.sendToPlayer();
+						}, 2000);
+					}
+					else {
+						c.player.setPosition(x, y, z);
+						c.player.UIContext.get('options.object.tp').label(`\u00A7aTeleported`);
+						c.player.UIContext.sendToPlayer();
+						Task.define(() => {
+							c.player.UIContext.get('options.object.tp').label(`TP to: ${o.name}`);
+							c.player.UIContext.sendToPlayer();
+						}, 2000);
+					}
+				}, false);
+
+
+			}, false);
 		}
 		context.get('status').label('\u00A7aLogs loaded!');
 		context.sendToPlayer();
@@ -539,10 +733,10 @@ function getLogsWithSelections(c: IScriptEvent) {
 		}
 	}).filter((entry) => {
 		if (data.getBoolean('search.modeRegex')) {
-			return entry.message.match(new RegExp(data.getString('searchbar'))) != null;
+			return entry.message.concat('↨', entry.subject?.name).concat('↨', entry.object?.name).match(new RegExp(data.getString('searchbar'))) != null;
 		}
 		else {
-			return entry.message.indexOf(data.getString('searchbar')) !== -1;
+			return entry.message.concat('↨', entry.subject?.name).concat('↨', entry.object?.name).indexOf(data.getString('searchbar')) !== -1;
 		}
 	}).map((entry) => {
 		let regex = data.getBoolean('search.modeRegex');
@@ -664,12 +858,15 @@ function getContext(player: IScriptPlayer) {
 	return mappet.createCompound(state);
 }
 
-function addCallback(id: string, callbackFunction: (c: IScriptEvent, elementId: string) => any) {
-	TL_LoggerCallbacks[id] = callbackFunction;
+function addCallback(id: string, callbackFunction: (c: IScriptEvent, elementId: string) => any, doUpdate: boolean = true) {
+	TL_LoggerCallbacks[id] = {
+		function: callbackFunction,
+		update: doUpdate,
+	};
 }
 
 function updateUI(c) {
-	Async.setTask('fill', () => {
+	Task.define(() => {
 		fillLogs(c);
 	});
 }
