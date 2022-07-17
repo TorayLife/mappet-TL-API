@@ -295,6 +295,7 @@ function formAbove(root, c) {
             c.player.UIContext.get('dateSort.icon').icon(sortAtoZ ? 'move_down' : 'move_up');
         });
         var searchRegex = data.getBoolean('search.modeRegex');
+        above.toggle('Search in names:').state(data.getBoolean('search.names')).id('search.names').wh(125, 16).anchorX(1).rx(1, -370);
         above.label('Search:').labelAnchor(0, 0.5).wh(65, 16).anchorX(1).rx(1, -300);
         above.textbox(data.getString('searchbar')).wh(300, 16).id('searchbar').rx(1, -20).anchorX(1).updateDelay(500).tooltip(searchRegex ? 'Using' +
             ' regex to search' : 'Normal search').color(searchRegex ? 0x99ff99 : 0xffffff);
@@ -622,12 +623,16 @@ function getLogsWithSelections(c) {
             return a.date - b.date;
         }
     }).filter(function (entry) {
-        var _a, _b, _c, _d;
+        var _a, _b;
+        var message = entry.message;
+        if (data.getBoolean('search.names')) {
+            message = message.concat('↨', (_a = entry.subject) === null || _a === void 0 ? void 0 : _a.name).concat('↨', (_b = entry.object) === null || _b === void 0 ? void 0 : _b.name);
+        }
         if (data.getBoolean('search.modeRegex')) {
-            return entry.message.concat('↨', (_a = entry.subject) === null || _a === void 0 ? void 0 : _a.name).concat('↨', (_b = entry.object) === null || _b === void 0 ? void 0 : _b.name).match(new RegExp(data.getString('searchbar'))) != null;
+            return message.match(new RegExp(data.getString('searchbar'))) != null;
         }
         else {
-            return entry.message.concat('↨', (_c = entry.subject) === null || _c === void 0 ? void 0 : _c.name).concat('↨', (_d = entry.object) === null || _d === void 0 ? void 0 : _d.name).indexOf(data.getString('searchbar')) !== -1;
+            return message.indexOf(data.getString('searchbar')) !== -1;
         }
     }).map(function (entry) {
         var regex = data.getBoolean('search.modeRegex');

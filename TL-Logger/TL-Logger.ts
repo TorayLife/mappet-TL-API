@@ -348,6 +348,8 @@ function formAbove(root, c) {
 
 
 		let searchRegex = data.getBoolean('search.modeRegex');
+
+		above.toggle('Search in names:').state(data.getBoolean('search.names')).id('search.names').wh(125, 16).anchorX(1).rx(1, -370);
 		above.label('Search:').labelAnchor(0, 0.5).wh(65, 16).anchorX(1).rx(1, -300);
 		above.textbox(data.getString('searchbar')).wh(300, 16).id('searchbar').rx(1, -20).anchorX(1).updateDelay(500).tooltip(searchRegex ? 'Using' +
 			' regex to search' : 'Normal search').color(searchRegex ? 0x99ff99 : 0xffffff);
@@ -732,11 +734,17 @@ function getLogsWithSelections(c: IScriptEvent) {
 			return a.date - b.date;
 		}
 	}).filter((entry) => {
+		let message = entry.message;
+
+		if(data.getBoolean('search.names')){
+			message = message.concat('↨', entry.subject?.name).concat('↨', entry.object?.name);
+		}
+
 		if (data.getBoolean('search.modeRegex')) {
-			return entry.message.concat('↨', entry.subject?.name).concat('↨', entry.object?.name).match(new RegExp(data.getString('searchbar'))) != null;
+			return message.match(new RegExp(data.getString('searchbar'))) != null;
 		}
 		else {
-			return entry.message.concat('↨', entry.subject?.name).concat('↨', entry.object?.name).indexOf(data.getString('searchbar')) !== -1;
+			return message.indexOf(data.getString('searchbar')) !== -1;
 		}
 	}).map((entry) => {
 		let regex = data.getBoolean('search.modeRegex');
