@@ -1,3 +1,8 @@
+/*! TL-Tasks
+ * Version: 0.0.1
+ * https://github.com/TorayLife/mappet-TL-API/tree/master/TL-Tasks
+ * Made by Dyamo (https://github.com/dyam0)
+ */
 var Task = /** @class */ (function () {
     function Task(fn, delay, isFirst) {
         if (delay === void 0) { delay = 0; }

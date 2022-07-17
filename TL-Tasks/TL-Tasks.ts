@@ -1,8 +1,12 @@
+/*! TL-Tasks
+ * Version: 0.0.1
+ * https://github.com/TorayLife/mappet-TL-API/tree/master/TL-Tasks
+ * Made by Dyamo (https://github.com/dyam0)
+ */
 
 type NonUndefined<T> = T extends undefined ? never : T;
 
 class Task<P extends NonUndefined<any>, R extends NonUndefined<any>> {
-
 	static Executors = Java.type('java.util.concurrent.Executors');
 	static TimeUnit = Java.type('java.util.concurrent.TimeUnit');
 
