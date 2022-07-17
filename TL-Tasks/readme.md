@@ -11,6 +11,7 @@ Made by [Dyamo](https://github.com/dyam0)
 This script does not require any other scripts to work.
 
 ### Install:
+
 Create `TL-Tasks` script on mappet dashboard.
 
 [Copy this code](https://raw.githubusercontent.com/TorayLife/mappet-TL-API/master/TL-Tasks/TL-Tasks.js) to your `TL-Tasks` script.
@@ -45,6 +46,7 @@ function main(c)
 ```
 
 ###Syntax:
+
 `Task.define(fn(), delay)` -
 
 fn - The function the task will perform.
