@@ -26,5 +26,6 @@ String.prototype.startsWith = function(subString:string){
 abstract class Java {
 
 	static type(str:string):any{}
+	static extend(type:any, object:object):any{}
 	static from<T>(any: T[]):T[]{return any;}
 }

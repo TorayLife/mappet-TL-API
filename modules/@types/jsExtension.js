@@ -9,6 +9,7 @@ var Java = /** @class */ (function () {
     function Java() {
     }
     Java.type = function (str) { };
+    Java.extend = function (type, object) { };
     Java.from = function (any) { return any; };
     return Java;
 }());
