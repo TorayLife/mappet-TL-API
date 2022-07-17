@@ -47,16 +47,21 @@ function main(c)
 
 ### Syntax:
 
-`Task.define(fn(), delay)` -
+> ###`Task.define(fn(), delay)`
+> 
+> ---
+> - **fn** - The function the task will perform.
+>
+> - **delay** - Delay in milliseconds.
 
-fn - The function the task will perform.
 
-delay - Delay in milliseconds.
 
-`Task.then(fn([result]), delay)` -
+> ###`.then(fn([result]), delay)`
+>
+> ---
+> - **fn** - The function the task will perform.
+>
+> - **result (optional)** - Result of PREVIOUS task.
+> 
+> - **delay** - Delay in milliseconds.
 
-fn - The function the task will perform.
-
-result (optional) - Result of PREVIOUS task.
-
-delay - Delay in milliseconds.
