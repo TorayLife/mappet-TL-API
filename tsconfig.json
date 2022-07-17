@@ -9,5 +9,6 @@
       "allowUnusedLabels": true,
       "noUnusedParameters": false,
       "noUnusedLocals": false,
+      "removeComments": false,
     }
   }
