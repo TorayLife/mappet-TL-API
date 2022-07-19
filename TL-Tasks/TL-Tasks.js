@@ -1,5 +1,5 @@
 /*! TL-Tasks
- * Version: 0.0.1
+ * Version: 0.0.2
  * https://github.com/TorayLife/mappet-TL-API/tree/master/TL-Tasks
  * Made by Dyamo (https://github.com/dyam0)
  */
@@ -19,12 +19,21 @@ var Task = /** @class */ (function () {
         this.nextTask = new Task(fn, delay, false);
         return this.nextTask;
     };
+    Task.prototype.cancel = function () {
+        this.nextTask = null;
+    };
     Task.prototype.start = function (previousResult) {
         var _this = this;
         Task.executorService.schedule(Task.makeRunnable(function () {
-            var _a;
-            var result = _this.fn(previousResult);
-            (_a = _this.nextTask) === null || _a === void 0 ? void 0 : _a.start(result);
+            var result;
+            try {
+                result = _this.fn(_this);
+            }
+            catch (error) { }
+            if (_this.nextTask !== null && result !== null) {
+                _this.nextTask.result = result;
+                _this.nextTask.start(result);
+            }
         }), this.delay, Task.TimeUnit.MILLISECONDS);
     };
     Task.define = function (fn, delay) {
