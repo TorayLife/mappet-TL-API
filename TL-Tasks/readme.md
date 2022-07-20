@@ -24,7 +24,7 @@ Here is pretty simple video about how to use this library.
 
 [![TL-Tasks usage example](https://img.youtube.com/vi/FuzdFSwhnsg/0.jpg)](https://youtu.be/FuzdFSwhnsg)
 
-Code from video:
+example code:
 
 ```js
 function main(c)
@@ -35,11 +35,12 @@ function main(c)
     c.send('starting');
     Task.define(function(){
         c.send(1);
-    }, 1000).then(function(){
+    }, 1000).then(function(task){
         c.send(2);
+        task.cancel(); //will cancel next task
         return 1000 - 7;
-    }, 1000).then(function(result){
-        c.send(result);
+    }, 1000).then(function(task){
+        c.send(task.result); //never been called
     },1000);
     c.send('ending');
 }
@@ -56,12 +57,14 @@ function main(c)
 
 
 
-> ###`.then(fn([result]), delay)`
+> ###`.then(fn([task={result}]), delay)`
 >
 > ---
 > - **fn** - The function the task will perform.
 >
-> - **result (optional)** - Result of PREVIOUS task.
+> - **task (optional)** - current task.
+> 
+> - **task.result** - result of previous task.
 > 
 > - **delay** - Delay in milliseconds.
 
