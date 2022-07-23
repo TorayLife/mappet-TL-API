@@ -27,7 +27,7 @@ abstract class Logger {
 	static log(c: IScriptEvent, message: string | error, type: 'INFO' | 'DEBUG' | 'ERROR') {
 		let storage = new SettingStorage('TL-LOGGER');
 		let sendList = storage.get('receiverList', 'Receiver list', 'If true, will send log to any player in array above.', SettingType.ARRAY, ['Sir_Toray_Life'], {
-			arrayType: SettingType.INTEGER,
+			arrayType: SettingType.STRING,
 		});
 		let isSend = storage.get('sendToReceiverList', 'Send to Receivers', 'If true, will send log to any player in receiver list', SettingType.BOOLEAN, false);
 		let date = new Date();
@@ -165,6 +165,7 @@ let TL_LoggerCallbacks = {};
 function main(c: IScriptEvent) {
 	try {
 		Task.define(() => {
+			Logger.info(c, `${c.player} open a Logger!`);
 			createUI(c);
 		}).then(() => {
 			fillLogs(c);
@@ -579,7 +580,7 @@ function fillLogs(c: IScriptEvent) {
 			text.tooltip(tooltip);
 			let textWithoutColor = logText.replace(new RegExp('\u00A7.', 'g'), '');
 
-			let height = (textWithoutColor.length / 135) > 1 ? 20 + 11 * (Math.round(textWithoutColor.length / 135)) : 20;
+			let height = (textWithoutColor.length / 140) > 1 ? 20 + 11 * (Math.round(textWithoutColor.length / 140)) : 20;
 			layout.h(height).visible(true).margin(4);
 
 			addCallback(`log.more.${i}`, (c, elementId) => {

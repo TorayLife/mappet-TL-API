@@ -1,4 +1,8 @@
-//TL-SETTINGS
+/*! TL-Settings
+ * Version: 0.0.1
+ * https://github.com/TorayLife/mappet-TL-API/tree/master/TL-Settings
+ * Made by TorayLife (https://github.com/TorayLife)
+ */
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -584,7 +588,7 @@ var SettingArray = /** @class */ (function (_super) {
             row.toggle(String(index)).state(entry).h(20).id("entry." + index);
         }
         if (this.additionalData.arrayType == SettingType.STRING) {
-            row.textarea(entry).h(20).id("entry." + index);
+            row.textbox(entry).h(20).id("entry." + index);
         }
         if (this.additionalData.arrayType == SettingType.COLOR_RGB) {
             var layout_1 = row.layout();
@@ -622,6 +626,9 @@ var SettingArray = /** @class */ (function (_super) {
             for (var i in entry) {
                 row.trackpad().integer().h(20).value(entry[i]).id("entry." + index + "." + i);
             }
+        }
+        if (this.additionalData.arrayType == SettingType.PARAGRAPH) {
+            row.textarea(entry).h(60).id("entry." + index);
         }
     };
     SettingArray.prototype.getKey = function (value) {
@@ -664,6 +671,9 @@ var SettingArray = /** @class */ (function (_super) {
             }
             return arr;
         }
+        if (this.additionalData.arrayType == SettingType.PARAGRAPH) {
+            return context.data.getString(id);
+        }
     };
     SettingArray.prototype.getEmpty = function () {
         if (this.additionalData.arrayType == SettingType.INTEGER) {
@@ -692,6 +702,9 @@ var SettingArray = /** @class */ (function (_super) {
         }
         if (this.additionalData.arrayType == SettingType.POS) {
             return [0, 0, 0];
+        }
+        if (this.additionalData.arrayType == SettingType.PARAGRAPH) {
+            return '';
         }
     };
     SettingArray.prototype.render = function (root) {

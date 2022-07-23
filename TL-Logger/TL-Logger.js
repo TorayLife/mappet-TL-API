@@ -23,7 +23,7 @@ var Logger = /** @class */ (function () {
     Logger.log = function (c, message, type) {
         var storage = new SettingStorage('TL-LOGGER');
         var sendList = storage.get('receiverList', 'Receiver list', 'If true, will send log to any player in array above.', SettingType.ARRAY, ['Sir_Toray_Life'], {
-            arrayType: SettingType.INTEGER,
+            arrayType: SettingType.STRING,
         });
         var isSend = storage.get('sendToReceiverList', 'Send to Receivers', 'If true, will send log to any player in receiver list', SettingType.BOOLEAN, false);
         var date = new Date();
@@ -134,6 +134,7 @@ var TL_LoggerCallbacks = {};
 function main(c) {
     try {
         Task.define(function () {
+            Logger.info(c, c.player + " open a Logger!");
             createUI(c);
         }).then(function () {
             fillLogs(c);
@@ -488,7 +489,7 @@ function fillLogs(c) {
             text.label(logText);
             text.tooltip(tooltip);
             var textWithoutColor = logText.replace(new RegExp('\u00A7.', 'g'), '');
-            var height = (textWithoutColor.length / 135) > 1 ? 20 + 11 * (Math.round(textWithoutColor.length / 135)) : 20;
+            var height = (textWithoutColor.length / 140) > 1 ? 20 + 11 * (Math.round(textWithoutColor.length / 140)) : 20;
             layout.h(height).visible(true).margin(4);
             addCallback("log.more." + i, function (c, elementId) {
                 var _a, _b;

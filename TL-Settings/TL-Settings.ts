@@ -1,4 +1,8 @@
-//TL-SETTINGS
+/*! TL-Settings
+ * Version: 0.0.1
+ * https://github.com/TorayLife/mappet-TL-API/tree/master/TL-Settings
+ * Made by TorayLife (https://github.com/TorayLife)
+ */
 
 let ColorMC = {
 	BLACK: ['0', '000000'],
@@ -621,7 +625,7 @@ class SettingArray extends Setting<any[]> {
 			row.toggle(String(index)).state(entry).h(20).id(`entry.${index}`);
 		}
 		if (this.additionalData.arrayType == SettingType.STRING) {
-			row.textarea(entry).h(20).id(`entry.${index}`);
+			row.textbox(entry).h(20).id(`entry.${index}`);
 		}
 		if (this.additionalData.arrayType == SettingType.COLOR_RGB) {
 			let layout = row.layout();
@@ -658,6 +662,9 @@ class SettingArray extends Setting<any[]> {
 			for (let i in entry) {
 				row.trackpad().integer().h(20).value(entry[i]).id(`entry.${index}.${i}`);
 			}
+		}
+		if (this.additionalData.arrayType == SettingType.PARAGRAPH) {
+			row.textarea(entry).h(60).id(`entry.${index}`);
 		}
 	}
 
@@ -702,6 +709,9 @@ class SettingArray extends Setting<any[]> {
 			}
 			return arr;
 		}
+		if (this.additionalData.arrayType == SettingType.PARAGRAPH) {
+			return context.data.getString(id);
+		}
 	}
 
 	getEmpty() {
@@ -731,6 +741,9 @@ class SettingArray extends Setting<any[]> {
 		}
 		if (this.additionalData.arrayType == SettingType.POS) {
 			return [0, 0, 0];
+		}
+		if (this.additionalData.arrayType == SettingType.PARAGRAPH) {
+			return '';
 		}
 	}
 
