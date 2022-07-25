@@ -48,7 +48,7 @@ function main(c)
 
 ### Syntax:
 
-> ###`Task.define(fn(), delay)`
+> ### `Task.define(fn(), delay)`
 > 
 > ---
 > - **fn** - The function the task will perform.
@@ -57,7 +57,7 @@ function main(c)
 
 
 
-> ###`.then(fn([task={result}]), delay)`
+> ### `.then(fn([task={result}]), delay)`
 >
 > ---
 > - **fn** - The function the task will perform.
