@@ -1,5 +1,5 @@
 /*! TL-Settings
- * Version: 0.0.1
+ * Version: 0.0.2
  * https://github.com/TorayLife/mappet-TL-API/tree/master/TL-Settings
  * Made by TorayLife (https://github.com/TorayLife)
  */

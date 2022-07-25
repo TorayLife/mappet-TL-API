@@ -1,5 +1,5 @@
 /*! TL-SettingsEditor
- * Version: 0.0.1
+ * Version: 0.0.2
  * https://github.com/TorayLife/mappet-TL-API/tree/master/TL-Settings
  * Made by TorayLife (https://github.com/TorayLife)
  */
@@ -14,8 +14,7 @@ function main(c) {
         var root = mappet.createUI(c, 'TL_SETTINGS_UI_HANDLER').background();
         root.current.keybind(63, 'F5', 'F5');
         var thisStorage = new SettingStorage(c.script);
-        var margin = thisStorage.get('margin', 'Margin', 'Cool description', SettingType.INTEGER, 4);
-        var doLog = thisStorage.get('doLog', 'Logging', 'If true, every setting change will be logged by TL-Logger', SettingType.BOOLEAN, true);
+        var margin = thisStorage.get('margin', 'Margin', 'The gap between settings.', SettingType.INTEGER, 4);
         var debug = thisStorage.get('debug', 'Debug', 'Used to make sure that all settings have the correct types and that everything is' +
             ' correct.', SettingType.BOOLEAN, false);
         /*
@@ -122,11 +121,6 @@ function TL_SETTINGS_UI_HANDLER(c) {
         var setting = settingStorage.registry["Setting." + itemEntries[1] + "." + itemEntries[2]];
         setting.callback(c, itemEntries);
         settingStorage.save();
-        var thisStorage = new SettingStorage(c.script);
-        var doLog = thisStorage.get('doLog', 'Logging', 'If true, every setting change will be logged by TL-Logger', SettingType.BOOLEAN, true);
-        if (doLog) {
-            Logger.info(c, "Setting." + itemEntries[1] + "." + itemEntries[2] + " has been changed! New value: " + setting.value);
-        }
     }
     if (lastId == 'scriptList') {
         var index = context.data.getInt('scriptList.index');
@@ -140,11 +134,6 @@ function TL_SETTINGS_UI_HANDLER(c) {
         var setting = settingStorage.registry["Setting." + lastEntries[1] + "." + lastEntries[2]];
         setting.callback(c, []);
         settingStorage.save();
-        var thisStorage = new SettingStorage(c.script);
-        var doLog = thisStorage.get('doLog', 'Logging', 'If true, every setting change will be logged by TL-Logger', SettingType.BOOLEAN, true);
-        if (doLog) {
-            Logger.info(c, "Setting." + lastEntries[1] + "." + lastEntries[2] + " has been changed! New value: " + setting.value);
-        }
     }
 }
 function TL_SETTINGS_ARRAY_UI(c) {

@@ -1,6 +1,6 @@
 # TL-Settings
 
-### Current version: 0.0.1
+### Current version: 0.0.2
 
 ### Description:
 
@@ -9,12 +9,11 @@ Advanced way to tweak your scripts without actually edit them.
 ### Dependencies:
 * [TL-Tasks](https://github.com/TorayLife/mappet-TL-API/tree/master/TL-Tasks)
 * [TL-FileLib](https://github.com/TorayLife/mappet-TL-API/tree/master/TL-FileLib)
-* [TL-Logger](https://github.com/TorayLife/mappet-TL-API/tree/master/TL-Logger)
 
 ### Install:
 
 1) Create `TL-Settings` script on mappet dashboard.
-2) Add `TL-FileLib`, `TL-Logger` scripts as a libraries.
+2) Add `TL-FileLib` scripts as a libraries.
 3) [Copy this code](https://raw.githubusercontent.com/TorayLife/mappet-TL-API/master/TL-Settings/TL-Settings.js) to your `TL-Settings` script.
 4) Create `TL-SettingsEditor` script on mappet dashboard.
 5) Add `TL-Tasks`, `TL-FileLib` and `TL-Settings` scripts as a libraries.
@@ -47,14 +46,14 @@ function main(c)
 
 ### Syntax:
 
-> ###`new SettingStorage(String settingFileName)`
+> ### `new SettingStorage(String settingFileName)`
 > 
 > ---
 > - **settingFileName** - Name of settingStorage file.
 
 
 
-> ###`<SettingStorage>.get(String systemId, String name, String description, SettingType type, <T> defaultValue, Object additionalData(optional))`
+> ### `<SettingStorage>.get(String systemId, String name, String description, SettingType type, <T> defaultValue, Object additionalData(optional))`
 >
 > ---
 > - **systemId** - Unique id for this setting storage.
@@ -85,5 +84,15 @@ function main(c)
 * ENUM
 * POS
 * ARRAY
-  * additionalData: settingType - type of array elements. e.g. `SettingType.POS` 
+  * additionalData: arrayType - type of array elements. e.g. `SettingType.POS` 
 * PARAGRAPH
+
+### Avaible settings:
+Global:
+
+* Settings path - path to folder when you want to store your settings.
+`settings/1` equals to `saves/<world_folder>/settings/1`
+
+TL-SettingsEditor:
+* Margin - The gap between settings.
+* Debug - Used to make sure that all settings have the correct types and that everything is correct.
