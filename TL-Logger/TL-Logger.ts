@@ -1,3 +1,9 @@
+/*! TL-Logger
+ * Version: 0.0.1
+ * https://github.com/TorayLife/mappet-TL-API/tree/master/TL-Logger
+ * Made by TorayLife (https://github.com/TorayLife)
+ */
+
 //region Library code
 
 //TL-LOGGER
@@ -89,26 +95,26 @@ class logEntry {
 
 		let s = c?.subject ?? null;
 		let subject;
-		if(s){
+		if (s) {
 			subject = {
 				name: s.name,
 				uuid: s.uniqueId,
 				x: s.position.x,
 				y: s.position.y,
 				z: s.position.z,
-			}
+			};
 		}
 
 		let o = c?.object ?? null;
 		let object;
-		if(o){
+		if (o) {
 			object = {
 				name: o.name,
 				uuid: o.uniqueId,
 				x: o.position.x,
 				y: o.position.y,
 				z: o.position.z,
-			}
+			};
 		}
 
 
@@ -164,12 +170,14 @@ let TL_LoggerCallbacks = {};
 // @ts-ignore
 function main(c: IScriptEvent) {
 	try {
-		Task.define(() => {
-			Logger.info(c, `${c.player} open a Logger!`);
-			createUI(c);
-		}).then(() => {
-			fillLogs(c);
-		});
+		Task
+			.define(() => {
+				Logger.info(c, `${c.player.name} open a Logger!`);
+				createUI(c);
+			})
+			.then(() => {
+				fillLogs(c);
+			});
 	}
 	catch (e) {
 		Logger.error(c, e);
@@ -430,15 +438,15 @@ function formTypeToggles(root, c) {
 	let startDate = new Date(0);
 	if (data && rememberPeriod) {
 		startDate = new Date(data.getInt('startDate.year'), data.getInt('startDate.month') - 1, data.getInt('startDate.day'),
-			data.getInt('startDate.hour') + Logger.getUTC() + 1, data.getInt('startDate.minutes'), data.getInt('startDate.seconds'));
+			data.getInt('startDate.hour') + Logger.getUTC(), data.getInt('startDate.minutes'), data.getInt('startDate.seconds'));
 	}
 	dateElement(typeTogglesList, 'Period start:', 'startDate', startDate);
 
 	let endDate = new Date();
-	endDate.setTime(endDate.getTime() + Logger.getUTC() * 60 * 60 * 1000);
+	endDate.setTime(endDate.setUTCHours(23,59,59,999));
 	if (data && rememberPeriod) {
 		endDate = new Date(data.getInt('endDate.year'), data.getInt('endDate.month') - 1, data.getInt('endDate.day'),
-			data.getInt('endDate.hour') + Logger.getUTC() + 1, data.getInt('endDate.minutes'), data.getInt('endDate.seconds'));
+			data.getInt('endDate.hour') + Logger.getUTC(), data.getInt('endDate.minutes'), data.getInt('endDate.seconds'));
 	}
 
 	dateElement(typeTogglesList, 'Period end:', 'endDate', endDate);
@@ -457,7 +465,7 @@ function dateElement(root: IMappetUIBuilder, label: string, dateId: string, defa
 		let day = date.getUTCDate();
 		let month = date.getUTCMonth() + 1;
 		let year = date.getUTCFullYear();
-		let hour = date.getUTCHours() + Logger.getUTC() + 1;
+		let hour = date.getUTCHours() + Logger.getUTC();
 		let minutes = date.getUTCMinutes();
 		let seconds = date.getUTCSeconds();
 
@@ -593,7 +601,7 @@ function fillLogs(c: IScriptEvent) {
 				let subjectName;
 				let subjectUUID;
 				let subjectPos;
-				if(s){
+				if (s) {
 
 					subjectEntity = c.server?.getEntity(s.uuid);
 					subjectName = s.name;
@@ -602,7 +610,7 @@ function fillLogs(c: IScriptEvent) {
 				}
 				let color = subjectEntity ? `\u00A7a` : `\u00A7c`;
 				let online = subjectEntity ? `Online` : `Offline`;
-				let type = subjectEntity?.isPlayer() ? "Player" : "Entity";
+				let type = subjectEntity?.isPlayer() ? 'Player' : 'Entity';
 				let status = `${color}Status: ${online}(${type})`;
 				context.get('options.subject.status').label(status);
 
@@ -615,7 +623,7 @@ function fillLogs(c: IScriptEvent) {
 				let objectName;
 				let objectUUID;
 				let objectPos;
-				if(o){
+				if (o) {
 
 					objectEntity = c.server?.getEntity(o.uuid);
 					objectName = o.name;
@@ -624,10 +632,9 @@ function fillLogs(c: IScriptEvent) {
 				}
 				color = objectEntity ? `\u00A7a` : `\u00A7c`;
 				online = objectEntity ? `Online` : `Offline`;
-				type = objectEntity?.isPlayer() ? "Player" : "Entity";
+				type = objectEntity?.isPlayer() ? 'Player' : 'Entity';
 				status = `${color}Status: ${online}(${type})`;
 				context.get('options.object.status').label(status);
-
 
 
 				context.get('options.object.name').label(objectName ?? '');
@@ -737,7 +744,7 @@ function getLogsWithSelections(c: IScriptEvent) {
 	}).filter((entry) => {
 		let message = entry.message;
 
-		if(data.getBoolean('search.names')){
+		if (data.getBoolean('search.names')) {
 			message = message.concat('↨', entry.subject?.name).concat('↨', entry.object?.name);
 		}
 

@@ -1,3 +1,8 @@
+/*! TL-Logger
+ * Version: 0.0.1
+ * https://github.com/TorayLife/mappet-TL-API/tree/master/TL-Logger
+ * Made by TorayLife (https://github.com/TorayLife)
+ */
 //region Library code
 //TL-LOGGER
 var Logger = /** @class */ (function () {
@@ -133,10 +138,12 @@ var TL_LoggerCallbacks = {};
 // @ts-ignore
 function main(c) {
     try {
-        Task.define(function () {
-            Logger.info(c, c.player + " open a Logger!");
+        Task
+            .define(function () {
+            Logger.info(c, c.player.name + " open a Logger!");
             createUI(c);
-        }).then(function () {
+        })
+            .then(function () {
             fillLogs(c);
         });
     }
@@ -362,13 +369,13 @@ function formTypeToggles(root, c) {
     typeTogglesList.toggle('[4ERROR').id('typeList.error').h(20).state(data ? data.getBoolean('typeList.error') : true);
     var startDate = new Date(0);
     if (data && rememberPeriod) {
-        startDate = new Date(data.getInt('startDate.year'), data.getInt('startDate.month') - 1, data.getInt('startDate.day'), data.getInt('startDate.hour') + Logger.getUTC() + 1, data.getInt('startDate.minutes'), data.getInt('startDate.seconds'));
+        startDate = new Date(data.getInt('startDate.year'), data.getInt('startDate.month') - 1, data.getInt('startDate.day'), data.getInt('startDate.hour') + Logger.getUTC(), data.getInt('startDate.minutes'), data.getInt('startDate.seconds'));
     }
     dateElement(typeTogglesList, 'Period start:', 'startDate', startDate);
     var endDate = new Date();
-    endDate.setTime(endDate.getTime() + Logger.getUTC() * 60 * 60 * 1000);
+    endDate.setTime(endDate.setUTCHours(23, 59, 59, 999));
     if (data && rememberPeriod) {
-        endDate = new Date(data.getInt('endDate.year'), data.getInt('endDate.month') - 1, data.getInt('endDate.day'), data.getInt('endDate.hour') + Logger.getUTC() + 1, data.getInt('endDate.minutes'), data.getInt('endDate.seconds'));
+        endDate = new Date(data.getInt('endDate.year'), data.getInt('endDate.month') - 1, data.getInt('endDate.day'), data.getInt('endDate.hour') + Logger.getUTC(), data.getInt('endDate.minutes'), data.getInt('endDate.seconds'));
     }
     dateElement(typeTogglesList, 'Period end:', 'endDate', endDate);
     typeTogglesList.toggle('Remember period').id('period').state(data ? data.getBoolean('period') : false).h(20);
@@ -385,7 +392,7 @@ function dateElement(root, label, dateId, defaultDate) {
         var day = date.getUTCDate();
         var month = date.getUTCMonth() + 1;
         var year = date.getUTCFullYear();
-        var hour = date.getUTCHours() + Logger.getUTC() + 1;
+        var hour = date.getUTCHours() + Logger.getUTC();
         var minutes = date.getUTCMinutes();
         var seconds = date.getUTCSeconds();
         var dateId = elementId.split('.')[0];
@@ -508,7 +515,7 @@ function fillLogs(c) {
                 }
                 var color = subjectEntity ? "\u00A7a" : "\u00A7c";
                 var online = subjectEntity ? "Online" : "Offline";
-                var type = (subjectEntity === null || subjectEntity === void 0 ? void 0 : subjectEntity.isPlayer()) ? "Player" : "Entity";
+                var type = (subjectEntity === null || subjectEntity === void 0 ? void 0 : subjectEntity.isPlayer()) ? 'Player' : 'Entity';
                 var status = color + "Status: " + online + "(" + type + ")";
                 context.get('options.subject.status').label(status);
                 context.get('options.subject.name').label(subjectName !== null && subjectName !== void 0 ? subjectName : '');
@@ -527,7 +534,7 @@ function fillLogs(c) {
                 }
                 color = objectEntity ? "\u00A7a" : "\u00A7c";
                 online = objectEntity ? "Online" : "Offline";
-                type = (objectEntity === null || objectEntity === void 0 ? void 0 : objectEntity.isPlayer()) ? "Player" : "Entity";
+                type = (objectEntity === null || objectEntity === void 0 ? void 0 : objectEntity.isPlayer()) ? 'Player' : 'Entity';
                 status = color + "Status: " + online + "(" + type + ")";
                 context.get('options.object.status').label(status);
                 context.get('options.object.name').label(objectName !== null && objectName !== void 0 ? objectName : '');
