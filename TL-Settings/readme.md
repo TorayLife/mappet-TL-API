@@ -1,6 +1,6 @@
 # TL-Settings
 
-### Current version: 0.0.2
+### Current version: 0.0.3
 
 ### Description:
 
@@ -30,15 +30,16 @@ Here is pretty simple video about how to use this library.
 example code:
 
 ```js
-function main(c)
-{
+function main(c) {
     // Code...
     var s = c.getSubject();
 
     var thisStorage = new SettingStorage(c.script);
-    var message = thisStorage.get('systemId', 'Actual name', 'Description that defines your setting wery well.', SettingType.STRING, 'defaultValue');
-
+    var message = thisStorage.init('systemId', 'Actual name', 'Description that defines your setting wery well.', SettingType.STRING, 'defaultValue');
+    // You can also use this if setting is already initialized:
+    var message1 = thisStorage.get('systemId');
     s.send(message);
+    s.send(message1);
 
 
 }
@@ -53,7 +54,7 @@ function main(c)
 
 
 
-> ### `<SettingStorage>.get(String systemId, String name, String description, SettingType type, <T> defaultValue, Object additionalData(optional))`
+> ### `<SettingStorage>.init(String systemId, String name, String description, SettingType type, <T> defaultValue, Object additionalData(optional))`
 >
 > ---
 > - **systemId** - Unique id for this setting storage.
@@ -67,6 +68,11 @@ function main(c)
 > - **defaultValue** - Value that uses if there is no settings file.
 >
 > - **additionalData** - Additional data for some rare tweaks.
+
+> ### `<SettingStorage>.get(String systemId)`
+>
+> ---
+> - **systemId** - Unique id for this setting storage.
 
 ### Types:
 
@@ -95,4 +101,3 @@ Global:
 
 TL-SettingsEditor:
 * Margin - The gap between settings.
-* Debug - Used to make sure that all settings have the correct types and that everything is correct.

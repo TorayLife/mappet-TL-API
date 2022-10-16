@@ -1,5 +1,5 @@
 /*! TL-Logger
- * Version: 0.0.1
+ * Version: 0.0.2
  * https://github.com/TorayLife/mappet-TL-API/tree/master/TL-Logger
  * Made by TorayLife (https://github.com/TorayLife)
  */
@@ -10,11 +10,11 @@ var Logger = /** @class */ (function () {
     }
     Logger.getLogsPath = function () {
         var storage = new SettingStorage('TL-LOGGER');
-        return storage.get('path', 'Path', 'Path to store all logs files.', SettingType.STRING, 'customLogs');
+        return storage.init('path', 'Path', 'Path to store all logs files.', SettingType.STRING, 'customLogs');
     };
     Logger.getUTC = function () {
         var storage = new SettingStorage('TL-LOGGER');
-        return storage.get('utc', 'UTC offset', 'Your local time zone. for example, GMT+3 will be equal to 3.', SettingType.INTEGER, 0);
+        return storage.init('utc', 'UTC offset', 'Your local time zone. for example, GMT+3 will be equal to 3.', SettingType.INTEGER, 0);
     };
     Logger.info = function (c, message) {
         this.log(c, message, 'INFO');
@@ -27,10 +27,10 @@ var Logger = /** @class */ (function () {
     };
     Logger.log = function (c, message, type) {
         var storage = new SettingStorage('TL-LOGGER');
-        var sendList = storage.get('receiverList', 'Receiver list', 'If true, will send log to any player in array above.', SettingType.ARRAY, ['Sir_Toray_Life'], {
+        var sendList = storage.init('receiverList', 'Receiver list', 'If true, will send log to any player in array above.', SettingType.ARRAY, ['Sir_Toray_Life'], {
             arrayType: SettingType.STRING,
         });
-        var isSend = storage.get('sendToReceiverList', 'Send to Receivers', 'If true, will send log to any player in receiver list', SettingType.BOOLEAN, false);
+        var isSend = storage.init('sendToReceiverList', 'Send to Receivers', 'If true, will send log to any player in receiver list', SettingType.BOOLEAN, false);
         var date = new Date();
         date.setTime(date.getTime());
         var path = this.getLogsPath() + "/" + date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
@@ -95,6 +95,12 @@ var logEntry = /** @class */ (function () {
                 z: o.position.z,
             };
         }
+        var isMorph = message instanceof Java.type('mchorse.metamorph.api.morphs.AbstractMorph');
+        var morphNBT = mappet.createCompound().getNBTTagComound();
+        if (isMorph) {
+            message.toNBT(morphNBT);
+            message = 'Morph...';
+        }
         this.data = {
             date: date.getTime(),
             script: (_c = c === null || c === void 0 ? void 0 : c.script) !== null && _c !== void 0 ? _c : 'unknown',
@@ -102,7 +108,9 @@ var logEntry = /** @class */ (function () {
             subject: subject,
             object: object,
             type: type,
-            message: message.stack ? message.stack : message,
+            isMorph: isMorph,
+            morphNBT: new (Java.type('mchorse.mappet.api.scripts.code.nbt.ScriptNBTCompound'))(morphNBT).stringify(),
+            message: String(message.stack ? message.stack : message),
         };
     }
     logEntry.getFromJS = function (js, c) {
@@ -139,7 +147,7 @@ var TL_LoggerCallbacks = {};
 function main(c) {
     try {
         Task
-            .define(function () {
+            .run(function () {
             Logger.info(c, c.player.name + " open a Logger!");
             createUI(c);
         })
@@ -148,7 +156,8 @@ function main(c) {
         });
     }
     catch (e) {
-        Logger.error(c, e);
+        c.send(e);
+        //Logger.error(c, e);
     }
 }
 function TL_LoggerHandler(c) {
@@ -186,9 +195,9 @@ function TL_LoggerHandler(c) {
 function createUI(c, show) {
     if (show === void 0) { show = true; }
     try {
-        var thisStorage = new SettingStorage('TL-LOGGER');
-        var debug = thisStorage.get('debug', 'Debug', 'Print debug logs when open UI.', SettingType.BOOLEAN, false);
-        if (debug) {
+        var thisStorage_1 = new SettingStorage('TL-LOGGER');
+        var debug_1 = thisStorage_1.init('debug', 'Debug', 'Print debug logs when open UI.', SettingType.BOOLEAN, false);
+        if (debug_1) {
             Logger.debug(c, 'Logger must work!');
             Logger.debug(c, 'This is a very very long debug log! This is a very very long debug log! This is a very very long debug log!' +
                 ' This is a very very long debug log! This is a very very long debug log! This is a very very long debug log! This is a very' +
@@ -199,11 +208,13 @@ function createUI(c, show) {
         var root = mappet.createUI(c, 'TL_LoggerHandler').background();
         var baseUI = formBaseUI(root, c);
         var logOptionsUI = formLogOptionsUI(root, c);
+        var showMorphUI = formShowMorphUI(root, c);
         if (show) {
             c.player.openUI(root, true);
         }
     }
     catch (e) {
+        c.send(e);
         Logger.error(c, e);
     }
 }
@@ -252,18 +263,42 @@ function formLogOptionsUI(root, c) {
     objectRow.label('Coords:').h(20).labelAnchor(0, 0.5);
     objectRow.textbox('').h(20).id('options.object.pos').maxLength(100);
     objectRow.button('TP to ').h(20).id('options.object.tp');
-    var returnRow = column.row(4, 40);
-    returnRow.button('return').wh(120, 20).id('logOptionsLayout.return');
+    var returnColumn = column.column(4, 40);
+    returnColumn.button('return').wh(120, 20).id('logOptionsLayout.return');
     addCallback('logOptionsLayout.return', function (c, elementId) {
         var context = c.player.UIContext;
         context.get('baseLayout').enabled(true);
         context.get('logOptionsLayout').enabled(false).visible(false);
     }, false);
+    returnColumn.button('show morph').wh(120, 20).id('logOptionsLayout.showMorph');
+    addCallback('logOptionsLayout.showMorph', function (c, elementId) {
+        var context = c.player.UIContext;
+        context.get('showMorphLayout').enabled(true).visible(true);
+        context.get('logOptionsLayout').enabled(false);
+    }, false);
+}
+function formShowMorphUI(root, c) {
+    var showMorphLayout = root.layout();
+    showMorphLayout.current.rwh(1, 1).id('showMorphLayout').enabled(false).visible(false).tooltip('\u00A70.');
+    var graphic = showMorphLayout.graphics();
+    graphic.rwh(1, 1).rxy(0, 0);
+    graphic.rect(-100, -100, 8000, 8000, 0xcc000000);
+    var morph = showMorphLayout.morph(mappet.createMorph(mappet.createCompound('{Name:"label"}')));
+    morph.id('showMorphLayout.morph').rwh(0.6, 0.6).anchor(0.5).rxy(0.5, 0.5);
+    morph.position(0.017, 1.083, -0).rotation(8, 25).distance(3.6).fov(40);
+    var returnColumn = showMorphLayout.column(4, 40);
+    returnColumn.current.rwh(0.8, 1).anchorY(1).anchorX(0.5).rxy(0.5, 1);
+    returnColumn.button('return').wh(120, 20).id('showMorphLayout.return');
+    addCallback('showMorphLayout.return', function (c, elementId) {
+        var context = c.player.UIContext;
+        context.get('showMorphLayout').enabled(false).visible(false);
+        context.get('logOptionsLayout').enabled(true).visible(true);
+    }, false);
 }
 function formEmptyLogs(root, c) {
     try {
-        var thisStorage = new SettingStorage('TL-LOGGER');
-        var logLimit = thisStorage.get('logLimit', 'Limit of logs', 'How many log entries can be rendered at the same time', SettingType.INTEGER, 200, {
+        var thisStorage_2 = new SettingStorage('TL-LOGGER');
+        var logLimit = thisStorage_2.init('logLimit', 'Limit of logs', 'How many log entries can be rendered at the same time', SettingType.INTEGER, 200, {
             min: 50,
             max: 200,
         });
@@ -459,8 +494,8 @@ function fillLogs(c) {
         context.sendToPlayer();
         saveContext(c.player, context.data);
         c.setValue('data', getContext(c.player));
-        var thisStorage = new SettingStorage('TL-LOGGER');
-        var logLimit = thisStorage.get('logLimit', 'Limit of logs', 'How many log entries can be rendered at the same time', SettingType.INTEGER, 200, {
+        var thisStorage_3 = new SettingStorage('TL-LOGGER');
+        var logLimit = thisStorage_3.init('logLimit', 'Limit of logs', 'How many log entries can be rendered at the same time', SettingType.INTEGER, 200, {
             min: 50,
             max: 200,
         });
@@ -541,6 +576,13 @@ function fillLogs(c) {
                 context.get('options.object.uuid').label(objectUUID !== null && objectUUID !== void 0 ? objectUUID : '');
                 context.get('options.object.pos').label(objectPos !== null && objectPos !== void 0 ? objectPos : '');
                 context.get('options.object.tp').label("TP to: " + objectName).enabled(o);
+                context.get('logOptionsLayout.showMorph').visible(log.isMorph);
+                if (log.isMorph) {
+                    var morph = mappet.createMorph(mappet.createCompound(log.morphNBT));
+                    context.get('showMorphLayout.morph').morph(morph);
+                    c.send('morph');
+                    c.send(log.morphNBT);
+                }
                 addCallback('options.subject.tp', function (c, elementId) {
                     var x = s.x;
                     var y = s.y;
@@ -548,7 +590,7 @@ function fillLogs(c) {
                     if (x == undefined || y == undefined || z == undefined || c.server.getEntity(s.uuid) == undefined) {
                         c.player.UIContext.get('options.subject.tp').label("\u00A7cCan't tp to this entity...");
                         c.player.UIContext.sendToPlayer();
-                        Task.define(function () {
+                        Task.run(function () {
                             c.player.UIContext.get('options.subject.tp').label("TP to: " + s.name);
                             c.player.UIContext.sendToPlayer();
                         }, 2000);
@@ -556,7 +598,7 @@ function fillLogs(c) {
                     c.player.setPosition(x, y, z);
                     c.player.UIContext.get('options.subject.tp').label("\u00A7aTeleported");
                     c.player.UIContext.sendToPlayer();
-                    Task.define(function () {
+                    Task.run(function () {
                         c.player.UIContext.get('options.subject.tp').label("TP to: " + s.name);
                         c.player.UIContext.sendToPlayer();
                     }, 2000);
@@ -568,7 +610,7 @@ function fillLogs(c) {
                     if (x == undefined || y == undefined || z == undefined || c.server.getEntity(o.uuid) == undefined) {
                         c.player.UIContext.get('options.object.tp').label("\u00A7cCan't tp to this entity...");
                         c.player.UIContext.sendToPlayer();
-                        Task.define(function () {
+                        Task.run(function () {
                             c.player.UIContext.get('options.object.tp').label("TP to: " + o.name);
                             c.player.UIContext.sendToPlayer();
                         }, 2000);
@@ -577,7 +619,7 @@ function fillLogs(c) {
                         c.player.setPosition(x, y, z);
                         c.player.UIContext.get('options.object.tp').label("\u00A7aTeleported");
                         c.player.UIContext.sendToPlayer();
-                        Task.define(function () {
+                        Task.run(function () {
                             c.player.UIContext.get('options.object.tp').label("TP to: " + o.name);
                             c.player.UIContext.sendToPlayer();
                         }, 2000);
@@ -660,7 +702,7 @@ function getLogsWithSelections(c) {
     });
     var context = c.player.UIContext;
     var thisStorage = new SettingStorage('TL-LOGGER');
-    var logLimit = thisStorage.get('logLimit', 'Limit of logs', 'How many log entries can be rendered at the same time', SettingType.INTEGER, 200, {
+    var logLimit = thisStorage.init('logLimit', 'Limit of logs', 'How many log entries can be rendered at the same time', SettingType.INTEGER, 200, {
         min: 50,
         max: 200,
     });
@@ -681,7 +723,7 @@ function getLogsFromChoosedFiles(c, fileNameArray) {
     var startDate = getDate(c, 'startDate');
     var endDate = getDate(c, 'endDate');
     var thisStorage = new SettingStorage('TL-LOGGER');
-    var logsPath = thisStorage.get('path', 'Path', 'Path to store all logs files.', SettingType.STRING, 'customLogs');
+    var logsPath = thisStorage.init('path', 'Path', 'Path to store all logs files.', SettingType.STRING, 'customLogs');
     var dateFolders = Java.from(FileLib.getWorldDir().resolve(logsPath).toFile().listFiles()).filter(function (x) {
         var folderNameDate = x.getName().split('-').map(function (x) { return Number(x); });
         var folderDate = new Date(folderNameDate[0], folderNameDate[1] - 1, folderNameDate[2]);
@@ -708,7 +750,7 @@ function getLogsFromChoosedFiles(c, fileNameArray) {
 }
 function getFiles() {
     var thisStorage = new SettingStorage('TL-LOGGER');
-    var logsPath = thisStorage.get('path', 'Path', 'Path to store all logs files.', SettingType.STRING, 'customLogs');
+    var logsPath = thisStorage.init('path', 'Path', 'Path to store all logs files.', SettingType.STRING, 'customLogs');
     var dateFolders = Java.from(FileLib.getWorldDir().resolve(logsPath).toFile().listFiles());
     var output = [];
     for (var _i = 0, dateFolders_2 = dateFolders; _i < dateFolders_2.length; _i++) {
@@ -754,7 +796,7 @@ function addCallback(id, callbackFunction, doUpdate) {
     };
 }
 function updateUI(c) {
-    Task.define(function () {
+    Task.run(function () {
         fillLogs(c);
     });
 }

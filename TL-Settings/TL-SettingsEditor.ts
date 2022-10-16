@@ -13,68 +13,11 @@ let globalTLSETTINGS: any = {
 };
 
 function main(c: IScriptEvent) {
-	Task.define(() => {
-
-
+	Task.run(() => {
 		let root = mappet.createUI(c, 'TL_SETTINGS_UI_HANDLER').background();
 		root.current.keybind(63, 'F5', 'F5');
 		let thisStorage = new SettingStorage(c.script);
-		let margin = thisStorage.get('margin', 'Margin', 'The gap between settings.', SettingType.INTEGER, 4);
-		let debug = thisStorage.get('debug', 'Debug', 'Used to make sure that all settings have the correct types and that everything is' +
-			' correct.', SettingType.BOOLEAN, false);
-		/*
-		 * do not delete these settings, they are needed as a hint.
-		 * If you don't need them, comment them out.
-		 */
-		let testInteger = thisStorage.get('testInteger', 'Test Integer', 'Test integer description', SettingType.INTEGER, 4, {
-			min: 4,
-			max: 8,
-		});
-		let testDouble = thisStorage.get('testDouble', 'test Double', 'test Double description', SettingType.DOUBLE, 4.555);
-		let testBoolean = thisStorage.get('testBoolean', 'test Boolean', 'test Boolean description', SettingType.BOOLEAN, true);
-		let testString = thisStorage.get('testString', 'test String', 'test string description', SettingType.STRING, 'Look at my horse, my horse is amazing!');
-		let testRGB = thisStorage.get('testRGB', 'test RGB', 'test RGB description', SettingType.COLOR_RGB, 0xFF42AB);
-		let testARGB = thisStorage.get('testARGB', 'test ARGB', 'test ARGB description', SettingType.COLOR_ARGB, 0xFF55ff55);
-		let testColorMC = thisStorage.get('testColorMC', 'test MC', 'test MC description', SettingType.COLOR_MC, ColorMC.RED);
-		let testEnum = thisStorage.get('testEnum', 'test Enum', '', SettingType.ENUM, 'enum1', {enumList: ['enum1', 'enum2', 'enum3']});
-		let testPos = thisStorage.get('testPos', 'testPos', 'desc', SettingType.POS, [1000, 5, 1000]);
-
-		let testArray = thisStorage.get('testArray', 'test Array', 'Cool description', SettingType.ARRAY, [
-			1,
-			2,
-			3,
-		], {arrayType: SettingType.INTEGER});
-		let testArrayColorRGB = thisStorage.get('testArrayColorRGB', 'test Array color RGB', 'Cool description', SettingType.ARRAY, [0xFF42AB], {arrayType: SettingType.COLOR_RGB});
-		let testArrayColorARGB = thisStorage.get('testArrayColorARGB', 'test Array color ARGB', 'Cool description', SettingType.ARRAY, [0xFF0042AB], {arrayType: SettingType.COLOR_ARGB});
-		let testArrayColorMC = thisStorage.get('testArrayColorMC', 'test Array color MC', 'Cool description', SettingType.ARRAY, [ColorMC.RED], {arrayType: SettingType.COLOR_MC});
-		let testArrayEnum = thisStorage.get('testArrayEnum', 'test Array Enum', 'Cool description', SettingType.ARRAY, ['variant 1'], {
-			arrayType: SettingType.ENUM,
-			enumList: ['variant 1', 'variant 2', 'variant 3'],
-		});
-		let testArrayPos = thisStorage.get('testArrayPos', 'test Array Pos', 'Cool description', SettingType.ARRAY, [
-			[2, 5, 6],
-			[3, 3, 3],
-		], {arrayType: SettingType.POS});
-
-		if (debug) {
-			let s = c.player;
-			printDebug(s, 'testInteger', testInteger);
-			printDebug(s, 'testDouble', testDouble);
-			printDebug(s, 'testBoolean', testBoolean);
-			printDebug(s, 'testString', testString);
-			printDebug(s, 'testRGB', testRGB);
-			printDebug(s, 'testARGB', testARGB);
-			printDebug(s, 'testColorMC', testColorMC);
-			printDebug(s, 'testEnum', testEnum);
-			printDebug(s, 'testPos', testPos);
-			printDebug(s, 'testArray', testArray);
-			printDebug(s, 'testArrayColorRGB', testArrayColorRGB);
-			printDebug(s, 'testArrayColorARGB', testArrayColorARGB);
-			printDebug(s, 'testArrayColorMC', testArrayColorMC);
-			printDebug(s, 'testArrayEnum', testArrayEnum);
-			printDebug(s, 'testArrayPos', testArrayPos);
-		}
-
+		let margin = thisStorage.init('margin', 'Margin', 'The gap between settings.', SettingType.INTEGER, 4);
 
 		globalTLSETTINGS.fileList = SettingStorage.getSettingsFileList().map((x) => x.replace('.json', ''));
 		globalTLSETTINGS.fileList.push('globalSettings');
@@ -259,10 +202,4 @@ function TL_SETTINGS_ARRAY_UI_HANDLER(c: IScriptEvent) {
 		c.scheduleScript(c.script, 'TL_SETTINGS_ARRAY_UI', 1);
 		return;
 	}
-}
-
-function printDebug(s: IScriptPlayer, name: string, value: any) {
-	s.send(`\u00A72====${name}====`);
-	s.send(`\u00A77Type: \u00A7b${typeof value}`);
-	s.send(`\u00A77Value: \u00A76${JSON.stringify(value)}`);
 }

@@ -1,5 +1,5 @@
 /*! TL-Settings
- * Version: 0.0.2
+ * Version: 0.0.3
  * https://github.com/TorayLife/mappet-TL-API/tree/master/TL-Settings
  * Made by TorayLife (https://github.com/TorayLife)
  */
@@ -70,12 +70,11 @@ class SettingStorage {
 		}
 		SettingStorage.settingDirectory = '';
 		let storage = new SettingStorage('globalSettings', false);
-		SettingStorage.settingDirectory = storage.get('settingDirectory', 'Setting directory', 'Folder that uses by script to storage' +
+		SettingStorage.settingDirectory = storage.init('settingDirectory', 'Setting directory', 'Folder that uses by script to storage' +
 			' settings', SettingType.STRING, 'settings');
 	}
 
-
-	get(systemLabel: string, label: string, description: string, type: SettingType, value: any, additionalData: any = null): any {
+	init(systemLabel: string, label: string, description: string, type: SettingType, value: any, additionalData: any = null): any {
 		let fullId = `Setting.${this.script}.${systemLabel}`;
 		if (this.has(fullId)) {
 			if (this.registry[fullId].type != type) {
@@ -103,6 +102,16 @@ class SettingStorage {
 			let setting = this.createSetting(data);
 			this.save();
 			return setting.value;
+		}
+	}
+
+	get(systemLabel: string): any {
+		let fullId = `Setting.${this.script}.${systemLabel}`;
+		if (this.has(fullId)) {
+			return this.registry[fullId].getValue();
+		}
+		else {
+			return undefined;
 		}
 	}
 
