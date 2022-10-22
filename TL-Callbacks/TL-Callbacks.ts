@@ -6,6 +6,7 @@ class Callback {
 	constructor(id:string) {
 		// @ts-ignore
 		Callback.registry[id] = this;
+		return Callback.registry[id];
 	}
 
 	setFunction(func: Function) {
