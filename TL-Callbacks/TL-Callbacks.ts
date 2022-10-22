@@ -3,8 +3,7 @@ class Callback {
 	component: UIComponent;
 	function: Function = () => {};
 
-	constructor(id:string, component: UIComponent) {
-		this.component = component;
+	constructor(id:string) {
 		// @ts-ignore
 		Callback.registry[id] = this;
 	}
