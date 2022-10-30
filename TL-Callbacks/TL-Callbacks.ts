@@ -21,7 +21,7 @@ class Callback {
 			let callback = Callback.registry[last];
 			callback.function(c, last);
 		}
-		if (last == '' && context.context && Callback.registry[context.context]) {
+		if (!context.isClosed() && last == '' && context.context && Callback.registry[context.context]) {
 			let callback = Callback.registry[context.context];
 			callback.function(c, last);
 		}
