@@ -27,3 +27,7 @@ class Callback {
 		}
 	}
 }
+
+function handler(c){
+	Callback.handler(c);
+}
